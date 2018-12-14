@@ -176,7 +176,7 @@ impl Decoder<Int96Type> for PlainDecoder<Int96Type> {
       let elem0 = LittleEndian::read_u32(&bytes[pos..pos + 4]);
       let elem1 = LittleEndian::read_u32(&bytes[pos + 4..pos + 8]);
       let elem2 = LittleEndian::read_u32(&bytes[pos + 8..pos + 12]);
-      buffer[i].set_data(elem0, elem1, elem2);
+      buffer[i] = Int96::new(elem0, elem1, elem2);
       pos += 12;
     }
     self.num_values -= num_values;
@@ -929,13 +929,14 @@ mod tests {
 
   #[test]
   fn test_plain_decode_int96() {
-    let mut data = vec![Int96::new(); 4];
-    data[0].set_data(11, 22, 33);
-    data[1].set_data(44, 55, 66);
-    data[2].set_data(10, 20, 30);
-    data[3].set_data(40, 50, 60);
+    let mut data = vec![
+      Int96::new(11, 22, 33),
+      Int96::new(44, 55, 66),
+      Int96::new(10, 20, 30),
+      Int96::new(40, 50, 60),
+    ];
     let data_bytes = Int96Type::to_byte_array(&data[..]);
-    let mut buffer = vec![Int96::new(); 4];
+    let mut buffer = vec![Int96::new(0,0,0); 4];
     test_plain_decode::<Int96Type>(
       ByteBufferPtr::new(data_bytes),
       4,

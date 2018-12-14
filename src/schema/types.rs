@@ -37,7 +37,7 @@ pub type ColumnDescPtr = Rc<ColumnDescriptor>;
 /// Used to describe primitive leaf fields and structs, including top-level schema.
 /// Note that the top-level schema type is represented using `GroupType` whose
 /// repetition is `None`.
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Type {
   PrimitiveType {
     basic_info: BasicTypeInfo,
@@ -98,6 +98,19 @@ impl Type {
         ..
       } => physical_type,
       _ => panic!("Cannot call get_physical_type() on a non-primitive type"),
+    }
+  }
+
+  /// Gets the type length of this primitive type.
+  /// Note that this will panic if called on a non-primitive type.
+  pub fn get_type_length(&self) -> i32 {
+    match *self {
+      Type::PrimitiveType {
+        basic_info: _,
+        type_length,
+        ..
+      } => type_length,
+      _ => panic!("Cannot call get_type_length() on a non-primitive type"),
     }
   }
 
@@ -452,7 +465,7 @@ impl<'a> GroupTypeBuilder<'a> {
 
 /// Basic type info. This contains information such as the name of the type,
 /// the repetition level, the logical type and the kind of the type (group, primitive).
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct BasicTypeInfo {
   name: String,
   repetition: Option<Repetition>,
@@ -473,6 +486,11 @@ impl BasicTypeInfo {
   pub fn repetition(&self) -> Repetition {
     assert!(self.repetition.is_some());
     self.repetition.unwrap()
+  }
+
+  /// Sets [`Repetition`](`::basic::Repetition`) value for the type.
+  pub fn set_repetition(&mut self, repetition: Option<Repetition>) {
+    self.repetition = repetition;
   }
 
   /// Returns [`LogicalType`](`::basic::LogicalType`) value for the type.

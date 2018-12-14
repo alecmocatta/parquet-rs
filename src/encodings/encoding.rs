@@ -1065,8 +1065,8 @@ mod tests {
     // Int96: len + reference
     run_test::<Int96Type>(
       -1,
-      &[Int96::from(vec![1, 2, 3]), Int96::from(vec![2, 3, 4])],
-      32,
+      &[Int96::new(1, 2, 3), Int96::new(2, 3, 4)],
+      24,
     );
     run_test::<ByteArrayType>(-1, &[ByteArray::from("abcd"), ByteArray::from("efj")], 15);
     run_test::<FixedLenByteArrayType>(
