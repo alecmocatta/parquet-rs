@@ -18,8 +18,6 @@
 //! Data types that connect Parquet physical types with their Rust-specific
 //! representations.
 
-use std::mem;
-
 use basic::Type;
 use byteorder::{BigEndian, ByteOrder};
 use util::memory::{ByteBuffer, ByteBufferPtr};

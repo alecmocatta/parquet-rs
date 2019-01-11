@@ -45,7 +45,7 @@ pub trait Deserialize: Sized {
   fn parse(schema: &Type) -> Result<(String, Self::Schema), ParquetError>;
   fn reader(
     schema: &Self::Schema,
-    mut path: &mut Vec<String>,
+    path: &mut Vec<String>,
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,

@@ -15,12 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use basic::Type as PhysicalType;
+// use basic::Type as PhysicalType;
 use column::reader::{get_typed_column_reader, ColumnReader, ColumnReaderImpl};
 use data_type::*;
 use errors::{ParquetError, Result};
 // use record::api::Field;
-use schema::types::ColumnDescPtr;
+// use schema::types::ColumnDescPtr;
 
 // /// Macro to generate simple functions that cover all types of triplet iterator.
 // /// $func is a function of a typed triplet iterator and $token is a either {`ref`} or

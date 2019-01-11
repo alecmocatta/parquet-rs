@@ -32,7 +32,7 @@ impl DebugType for ValueSchema {
 }
 impl ValueSchema {
   pub fn is_bool(&self) -> bool {
-    if let ValueSchema::Bool(ret) = self {
+    if let ValueSchema::Bool(_) = self {
       true
     } else {
       false
@@ -48,7 +48,7 @@ impl ValueSchema {
   }
 
   pub fn is_u8(&self) -> bool {
-    if let ValueSchema::U8(ret) = self {
+    if let ValueSchema::U8(_) = self {
       true
     } else {
       false
@@ -64,7 +64,7 @@ impl ValueSchema {
   }
 
   pub fn is_i8(&self) -> bool {
-    if let ValueSchema::I8(ret) = self {
+    if let ValueSchema::I8(_) = self {
       true
     } else {
       false
@@ -80,7 +80,7 @@ impl ValueSchema {
   }
 
   pub fn is_u16(&self) -> bool {
-    if let ValueSchema::U16(ret) = self {
+    if let ValueSchema::U16(_) = self {
       true
     } else {
       false
@@ -96,7 +96,7 @@ impl ValueSchema {
   }
 
   pub fn is_i16(&self) -> bool {
-    if let ValueSchema::I16(ret) = self {
+    if let ValueSchema::I16(_) = self {
       true
     } else {
       false
@@ -112,7 +112,7 @@ impl ValueSchema {
   }
 
   pub fn is_u32(&self) -> bool {
-    if let ValueSchema::U32(ret) = self {
+    if let ValueSchema::U32(_) = self {
       true
     } else {
       false
@@ -128,7 +128,7 @@ impl ValueSchema {
   }
 
   pub fn is_i32(&self) -> bool {
-    if let ValueSchema::I32(ret) = self {
+    if let ValueSchema::I32(_) = self {
       true
     } else {
       false
@@ -144,7 +144,7 @@ impl ValueSchema {
   }
 
   pub fn is_u64(&self) -> bool {
-    if let ValueSchema::U64(ret) = self {
+    if let ValueSchema::U64(_) = self {
       true
     } else {
       false
@@ -160,7 +160,7 @@ impl ValueSchema {
   }
 
   pub fn is_i64(&self) -> bool {
-    if let ValueSchema::I64(ret) = self {
+    if let ValueSchema::I64(_) = self {
       true
     } else {
       false
@@ -176,7 +176,7 @@ impl ValueSchema {
   }
 
   pub fn is_f32(&self) -> bool {
-    if let ValueSchema::F32(ret) = self {
+    if let ValueSchema::F32(_) = self {
       true
     } else {
       false
@@ -192,7 +192,7 @@ impl ValueSchema {
   }
 
   pub fn is_f64(&self) -> bool {
-    if let ValueSchema::F64(ret) = self {
+    if let ValueSchema::F64(_) = self {
       true
     } else {
       false
@@ -208,7 +208,7 @@ impl ValueSchema {
   }
 
   pub fn is_timestamp(&self) -> bool {
-    if let ValueSchema::Timestamp(ret) = self {
+    if let ValueSchema::Timestamp(_) = self {
       true
     } else {
       false
@@ -224,7 +224,7 @@ impl ValueSchema {
   }
 
   pub fn is_array(&self) -> bool {
-    if let ValueSchema::Array(ret) = self {
+    if let ValueSchema::Array(_) = self {
       true
     } else {
       false
@@ -240,7 +240,7 @@ impl ValueSchema {
   }
 
   pub fn is_string(&self) -> bool {
-    if let ValueSchema::String(ret) = self {
+    if let ValueSchema::String(_) = self {
       true
     } else {
       false
@@ -256,7 +256,7 @@ impl ValueSchema {
   }
 
   pub fn is_list(&self) -> bool {
-    if let ValueSchema::List(ret) = self {
+    if let ValueSchema::List(_) = self {
       true
     } else {
       false
@@ -272,7 +272,7 @@ impl ValueSchema {
   }
 
   pub fn is_map(&self) -> bool {
-    if let ValueSchema::Map(ret) = self {
+    if let ValueSchema::Map(_) = self {
       true
     } else {
       false
@@ -288,7 +288,7 @@ impl ValueSchema {
   }
 
   pub fn is_group(&self) -> bool {
-    if let ValueSchema::Group(ret) = self {
+    if let ValueSchema::Group(_) = self {
       true
     } else {
       false
@@ -304,7 +304,7 @@ impl ValueSchema {
   }
 
   pub fn is_option(&self) -> bool {
-    if let ValueSchema::Option(ret) = self {
+    if let ValueSchema::Option(_) = self {
       true
     } else {
       false

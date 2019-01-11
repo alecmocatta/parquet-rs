@@ -17,14 +17,9 @@
 
 //! Contains Row enum that is used to represent record in Rust.
 
-use std::fmt;
-
-use basic::{LogicalType, Type as PhysicalType};
 use chrono::{Local, TimeZone};
-use data_type::{ByteArray, Decimal, Int96};
-use errors::{ParquetError, Result};
+use data_type::Decimal;
 use num_bigint::{BigInt, Sign};
-use schema::types::ColumnDescPtr;
 
 /// Macro as a shortcut to generate 'not yet implemented' panic error.
 macro_rules! nyi {

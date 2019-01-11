@@ -20,9 +20,8 @@
 
 use super::{
   types::{Group, List, Map, Root, Timestamp, Value},
-  DebugType, Deserialize,
+  Deserialize,
 };
-use basic::{LogicalType, Repetition, Type as PhysicalType};
 use data_type::{
   BoolType, ByteArrayType, DoubleType, FixedLenByteArrayType, FloatType, Int32Type,
   Int64Type, Int96, Int96Type,
@@ -30,9 +29,9 @@ use data_type::{
 use errors::{ParquetError, Result};
 use file::reader::{FileReader, RowGroupReader};
 use record::triplet::TypedTripletIter;
-use schema::types::{ColumnPath, SchemaDescPtr, SchemaDescriptor, Type, TypePtr};
+use schema::types::{SchemaDescPtr, SchemaDescriptor, Type};
 use std::{
-  collections::HashMap, convert::TryInto, error::Error, fmt, marker::PhantomData, rc::Rc,
+  collections::HashMap, convert::TryInto, error::Error, marker::PhantomData, rc::Rc,
 };
 
 // /// Tree builder for `Reader` enum.
@@ -1421,11 +1420,11 @@ impl<'a> Iterator for RowIter<'a> {
         .get_row_group(self.current_row_group)
         .unwrap();
       self.current_row_group += 1;
-      let mut iter = unimplemented!(); // self
-                                       // .tree_builder
-                                       // .as_iter(self.descr.clone(), row_group_reader);
-                                       // row = iter.next();
-                                       // self.row_iter = Some(iter);
+      let iter = unimplemented!(); // self
+                                   // .tree_builder
+                                   // .as_iter(self.descr.clone(), row_group_reader);
+                                   // row = iter.next();
+                                   // self.row_iter = Some(iter);
     }
 
     row
@@ -1439,9 +1438,9 @@ pub struct ReaderIter {
 }
 
 impl ReaderIter {
-  fn new(mut root_reader: (), num_records: usize) -> Self {
+  fn new(root_reader: (), num_records: usize) -> Self {
     // Prepare root reader by advancing all column vectors
-    unimplemented!();
+    // unimplemented!();
     // root_reader.advance_columns();
     Self {
       root_reader,

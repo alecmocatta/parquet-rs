@@ -22,13 +22,9 @@ use crate::{
     Int64Type, Int96, Int96Type,
   },
   errors::ParquetError,
-  file::reader::{FileReader, ParquetReader, SerializedFileReader},
   schema::{
     parser::parse_message_type,
-    printer::{print_file_metadata, print_parquet_metadata, print_schema},
-    types::{
-      BasicTypeInfo, ColumnDescPtr, ColumnPath, SchemaDescPtr, SchemaDescriptor, Type,
-    },
+    types::{ColumnDescPtr, ColumnPath, Type},
   },
 };
 use std::{
@@ -155,10 +151,10 @@ impl Hash for Value {
         8u8.hash(state);
         value.hash(state);
       },
-      Value::F32(value) => {
+      Value::F32(_value) => {
         9u8.hash(state);
       },
-      Value::F64(value) => {
+      Value::F64(_value) => {
         10u8.hash(state);
       },
       Value::Timestamp(value) => {
@@ -177,10 +173,10 @@ impl Hash for Value {
         14u8.hash(state);
         value.hash(state);
       },
-      Value::Map(value) => {
+      Value::Map(_value) => {
         15u8.hash(state);
       },
-      Value::Group(value) => {
+      Value::Group(_value) => {
         16u8.hash(state);
       },
       Value::Option(value) => {
@@ -193,31 +189,31 @@ impl Hash for Value {
 impl Eq for Value {}
 
 impl Value {
-  fn is_bool(&self) -> bool {
+  pub fn is_bool(&self) -> bool {
+    if let Value::Bool(_) = self {
+      true
+    } else {
+      false
+    }
+  }
+
+  pub fn as_bool(self) -> Result<bool, ParquetError> {
     if let Value::Bool(ret) = self {
-      true
-    } else {
-      false
-    }
-  }
-
-  fn as_bool(self) -> Result<bool, ParquetError> {
-    if let Value::Bool(ret) = self {
       Ok(ret)
     } else {
       Err(ParquetError::General(String::from("")))
     }
   }
 
-  fn is_u8(&self) -> bool {
-    if let Value::U8(ret) = self {
+  pub fn is_u8(&self) -> bool {
+    if let Value::U8(_) = self {
       true
     } else {
       false
     }
   }
 
-  fn as_u8(self) -> Result<u8, ParquetError> {
+  pub fn as_u8(self) -> Result<u8, ParquetError> {
     if let Value::U8(ret) = self {
       Ok(ret)
     } else {
@@ -225,31 +221,31 @@ impl Value {
     }
   }
 
-  fn is_i8(&self) -> bool {
+  pub fn is_i8(&self) -> bool {
+    if let Value::I8(_) = self {
+      true
+    } else {
+      false
+    }
+  }
+
+  pub fn as_i8(self) -> Result<i8, ParquetError> {
     if let Value::I8(ret) = self {
-      true
-    } else {
-      false
-    }
-  }
-
-  fn as_i8(self) -> Result<i8, ParquetError> {
-    if let Value::I8(ret) = self {
       Ok(ret)
     } else {
       Err(ParquetError::General(String::from("")))
     }
   }
 
-  fn is_u16(&self) -> bool {
-    if let Value::U16(ret) = self {
+  pub fn is_u16(&self) -> bool {
+    if let Value::U16(_) = self {
       true
     } else {
       false
     }
   }
 
-  fn as_u16(self) -> Result<u16, ParquetError> {
+  pub fn as_u16(self) -> Result<u16, ParquetError> {
     if let Value::U16(ret) = self {
       Ok(ret)
     } else {
@@ -257,31 +253,31 @@ impl Value {
     }
   }
 
-  fn is_i16(&self) -> bool {
+  pub fn is_i16(&self) -> bool {
+    if let Value::I16(_) = self {
+      true
+    } else {
+      false
+    }
+  }
+
+  pub fn as_i16(self) -> Result<i16, ParquetError> {
     if let Value::I16(ret) = self {
-      true
-    } else {
-      false
-    }
-  }
-
-  fn as_i16(self) -> Result<i16, ParquetError> {
-    if let Value::I16(ret) = self {
       Ok(ret)
     } else {
       Err(ParquetError::General(String::from("")))
     }
   }
 
-  fn is_u32(&self) -> bool {
-    if let Value::U32(ret) = self {
+  pub fn is_u32(&self) -> bool {
+    if let Value::U32(_) = self {
       true
     } else {
       false
     }
   }
 
-  fn as_u32(self) -> Result<u32, ParquetError> {
+  pub fn as_u32(self) -> Result<u32, ParquetError> {
     if let Value::U32(ret) = self {
       Ok(ret)
     } else {
@@ -289,31 +285,31 @@ impl Value {
     }
   }
 
-  fn is_i32(&self) -> bool {
+  pub fn is_i32(&self) -> bool {
+    if let Value::I32(_) = self {
+      true
+    } else {
+      false
+    }
+  }
+
+  pub fn as_i32(self) -> Result<i32, ParquetError> {
     if let Value::I32(ret) = self {
-      true
-    } else {
-      false
-    }
-  }
-
-  fn as_i32(self) -> Result<i32, ParquetError> {
-    if let Value::I32(ret) = self {
       Ok(ret)
     } else {
       Err(ParquetError::General(String::from("")))
     }
   }
 
-  fn is_u64(&self) -> bool {
-    if let Value::U64(ret) = self {
+  pub fn is_u64(&self) -> bool {
+    if let Value::U64(_) = self {
       true
     } else {
       false
     }
   }
 
-  fn as_u64(self) -> Result<u64, ParquetError> {
+  pub fn as_u64(self) -> Result<u64, ParquetError> {
     if let Value::U64(ret) = self {
       Ok(ret)
     } else {
@@ -321,31 +317,31 @@ impl Value {
     }
   }
 
-  fn is_i64(&self) -> bool {
+  pub fn is_i64(&self) -> bool {
+    if let Value::I64(_) = self {
+      true
+    } else {
+      false
+    }
+  }
+
+  pub fn as_i64(self) -> Result<i64, ParquetError> {
     if let Value::I64(ret) = self {
-      true
-    } else {
-      false
-    }
-  }
-
-  fn as_i64(self) -> Result<i64, ParquetError> {
-    if let Value::I64(ret) = self {
       Ok(ret)
     } else {
       Err(ParquetError::General(String::from("")))
     }
   }
 
-  fn is_f32(&self) -> bool {
-    if let Value::F32(ret) = self {
+  pub fn is_f32(&self) -> bool {
+    if let Value::F32(_) = self {
       true
     } else {
       false
     }
   }
 
-  fn as_f32(self) -> Result<f32, ParquetError> {
+  pub fn as_f32(self) -> Result<f32, ParquetError> {
     if let Value::F32(ret) = self {
       Ok(ret)
     } else {
@@ -353,31 +349,31 @@ impl Value {
     }
   }
 
-  fn is_f64(&self) -> bool {
+  pub fn is_f64(&self) -> bool {
+    if let Value::F64(_) = self {
+      true
+    } else {
+      false
+    }
+  }
+
+  pub fn as_f64(self) -> Result<f64, ParquetError> {
     if let Value::F64(ret) = self {
-      true
-    } else {
-      false
-    }
-  }
-
-  fn as_f64(self) -> Result<f64, ParquetError> {
-    if let Value::F64(ret) = self {
       Ok(ret)
     } else {
       Err(ParquetError::General(String::from("")))
     }
   }
 
-  fn is_timestamp(&self) -> bool {
-    if let Value::Timestamp(ret) = self {
+  pub fn is_timestamp(&self) -> bool {
+    if let Value::Timestamp(_) = self {
       true
     } else {
       false
     }
   }
 
-  fn as_timestamp(self) -> Result<Timestamp, ParquetError> {
+  pub fn as_timestamp(self) -> Result<Timestamp, ParquetError> {
     if let Value::Timestamp(ret) = self {
       Ok(ret)
     } else {
@@ -385,31 +381,31 @@ impl Value {
     }
   }
 
-  fn is_array(&self) -> bool {
+  pub fn is_array(&self) -> bool {
+    if let Value::Array(_) = self {
+      true
+    } else {
+      false
+    }
+  }
+
+  pub fn as_array(self) -> Result<Vec<u8>, ParquetError> {
     if let Value::Array(ret) = self {
-      true
-    } else {
-      false
-    }
-  }
-
-  fn as_array(self) -> Result<Vec<u8>, ParquetError> {
-    if let Value::Array(ret) = self {
       Ok(ret)
     } else {
       Err(ParquetError::General(String::from("")))
     }
   }
 
-  fn is_string(&self) -> bool {
-    if let Value::String(ret) = self {
+  pub fn is_string(&self) -> bool {
+    if let Value::String(_) = self {
       true
     } else {
       false
     }
   }
 
-  fn as_string(self) -> Result<String, ParquetError> {
+  pub fn as_string(self) -> Result<String, ParquetError> {
     if let Value::String(ret) = self {
       Ok(ret)
     } else {
@@ -417,31 +413,31 @@ impl Value {
     }
   }
 
-  fn is_list(&self) -> bool {
+  pub fn is_list(&self) -> bool {
+    if let Value::List(_) = self {
+      true
+    } else {
+      false
+    }
+  }
+
+  pub fn as_list(self) -> Result<List<Value>, ParquetError> {
     if let Value::List(ret) = self {
-      true
-    } else {
-      false
-    }
-  }
-
-  fn as_list(self) -> Result<List<Value>, ParquetError> {
-    if let Value::List(ret) = self {
       Ok(ret)
     } else {
       Err(ParquetError::General(String::from("")))
     }
   }
 
-  fn is_map(&self) -> bool {
-    if let Value::Map(ret) = self {
+  pub fn is_map(&self) -> bool {
+    if let Value::Map(_) = self {
       true
     } else {
       false
     }
   }
 
-  fn as_map(self) -> Result<Map<Value, Value>, ParquetError> {
+  pub fn as_map(self) -> Result<Map<Value, Value>, ParquetError> {
     if let Value::Map(ret) = self {
       Ok(ret)
     } else {
@@ -449,15 +445,15 @@ impl Value {
     }
   }
 
-  fn is_group(&self) -> bool {
-    if let Value::Group(ret) = self {
+  pub fn is_group(&self) -> bool {
+    if let Value::Group(_) = self {
       true
     } else {
       false
     }
   }
 
-  fn as_group(self) -> Result<Group, ParquetError> {
+  pub fn as_group(self) -> Result<Group, ParquetError> {
     if let Value::Group(ret) = self {
       Ok(ret)
     } else {
@@ -465,15 +461,15 @@ impl Value {
     }
   }
 
-  fn is_option(&self) -> bool {
-    if let Value::Option(ret) = self {
+  pub fn is_option(&self) -> bool {
+    if let Value::Option(_) = self {
       true
     } else {
       false
     }
   }
 
-  fn as_option(self) -> Result<Option<Value>, ParquetError> {
+  pub fn as_option(self) -> Result<Option<Value>, ParquetError> {
     if let Value::Option(ret) = self {
       Ok(*ret)
     } else {
@@ -767,7 +763,7 @@ impl Deserialize for Value {
 
   fn reader(
     schema: &Self::Schema,
-    mut path: &mut Vec<String>,
+    path: &mut Vec<String>,
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
@@ -1016,7 +1012,7 @@ impl Deserialize for Root<Value> {
       println!("{:?}", schema);
     }
 
-    let mut value = value.ok_or(ParquetError::General(String::from("Value")))?;
+    let value = value.ok_or(ParquetError::General(String::from("Value")))?;
 
     Ok((
       String::from(""),
@@ -1026,7 +1022,7 @@ impl Deserialize for Root<Value> {
 
   fn reader(
     schema: &Self::Schema,
-    mut path: &mut Vec<String>,
+    path: &mut Vec<String>,
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
@@ -1052,16 +1048,16 @@ impl Deserialize for Group {
 
   fn parse(schema: &Type) -> Result<(String, Self::Schema), ParquetError> {
     if schema.is_group() && !schema.is_schema() && schema.get_basic_info().repetition() == Repetition::REQUIRED {
-			let mut map = HashMap::new();
-			let fields = schema.get_fields().iter().enumerate().map(|(i,field)| {
-				let (name, schema) = <Value as Deserialize>::parse(&**field)?;
-				let x = map.insert(name, i);
-				assert!(x.is_none());
-				Ok(schema)
-			}).collect::<Result<Vec<ValueSchema>,ParquetError>>()?;
-			let schema_ = GroupSchema(fields, map);//$struct_schema{$($name: fields.get(stringify!($name)).ok_or(ParquetError::General(format!("Struct {} missing field {}", stringify!($struct), stringify!($name)))).and_then(|x|<$type_ as Deserialize>::parse(&**x))?.1,)*};
-			return Ok((schema.name().to_owned(), schema_))
-		}
+      let mut map = HashMap::new();
+      let fields = schema.get_fields().iter().enumerate().map(|(i,field)| {
+        let (name, schema) = <Value as Deserialize>::parse(&**field)?;
+        let x = map.insert(name, i);
+        assert!(x.is_none());
+        Ok(schema)
+      }).collect::<Result<Vec<ValueSchema>,ParquetError>>()?;
+      let schema_ = GroupSchema(fields, map);//$struct_schema{$($name: fields.get(stringify!($name)).ok_or(ParquetError::General(format!("Struct {} missing field {}", stringify!($struct), stringify!($name)))).and_then(|x|<$type_ as Deserialize>::parse(&**x))?.1,)*};
+      return Ok((schema.name().to_owned(), schema_))
+    }
     Err(ParquetError::General(format!(
       "Struct {}",
       stringify!($struct)
@@ -1070,7 +1066,7 @@ impl Deserialize for Group {
 
   fn reader(
     schema: &Self::Schema,
-    mut path: &mut Vec<String>,
+    path: &mut Vec<String>,
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
@@ -1159,7 +1155,7 @@ where
 
   fn reader(
     schema: &Self::Schema,
-    mut path: &mut Vec<String>,
+    path: &mut Vec<String>,
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
@@ -1212,10 +1208,10 @@ where T: Deserialize
 
   fn parse(schema: &Type) -> Result<(String, Self::Schema), ParquetError> {
     // <Value as Deserialize>::parse(schema).and_then(|(name, schema)| {
-    // 	match schema {
-    // 		ValueSchema::List(box ListSchema(schema, a)) => Ok((name, ListSchema(schema,
-    // a))), 		_ => Err(ParquetError::General(String::from(""))),
-    // 	}
+    //  match schema {
+    //    ValueSchema::List(box ListSchema(schema, a)) => Ok((name, ListSchema(schema,
+    // a))),    _ => Err(ParquetError::General(String::from(""))),
+    //  }
     // })
     if schema.is_group()
       && !schema.is_schema()
@@ -1268,7 +1264,7 @@ where T: Deserialize
 
   fn reader(
     schema: &Self::Schema,
-    mut path: &mut Vec<String>,
+    path: &mut Vec<String>,
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
@@ -1331,7 +1327,7 @@ where
 
   fn reader(
     schema: &Self::Schema,
-    mut path: &mut Vec<String>,
+    path: &mut Vec<String>,
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
@@ -1366,8 +1362,8 @@ impl Deserialize for bool {
   }
 
   fn reader(
-    schema: &Self::Schema,
-    mut path: &mut Vec<String>,
+    _schema: &Self::Schema,
+    path: &mut Vec<String>,
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
@@ -1398,8 +1394,8 @@ impl Deserialize for f32 {
   }
 
   fn reader(
-    schema: &Self::Schema,
-    mut path: &mut Vec<String>,
+    _schema: &Self::Schema,
+    path: &mut Vec<String>,
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
@@ -1430,8 +1426,8 @@ impl Deserialize for f64 {
   }
 
   fn reader(
-    schema: &Self::Schema,
-    mut path: &mut Vec<String>,
+    _schema: &Self::Schema,
+    path: &mut Vec<String>,
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
@@ -1462,8 +1458,8 @@ impl Deserialize for i8 {
   }
 
   fn reader(
-    schema: &Self::Schema,
-    mut path: &mut Vec<String>,
+    _schema: &Self::Schema,
+    path: &mut Vec<String>,
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
@@ -1497,8 +1493,8 @@ impl Deserialize for u8 {
   }
 
   fn reader(
-    schema: &Self::Schema,
-    mut path: &mut Vec<String>,
+    _schema: &Self::Schema,
+    path: &mut Vec<String>,
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
@@ -1532,8 +1528,8 @@ impl Deserialize for i16 {
   }
 
   fn reader(
-    schema: &Self::Schema,
-    mut path: &mut Vec<String>,
+    _schema: &Self::Schema,
+    path: &mut Vec<String>,
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
@@ -1567,8 +1563,8 @@ impl Deserialize for u16 {
   }
 
   fn reader(
-    schema: &Self::Schema,
-    mut path: &mut Vec<String>,
+    _schema: &Self::Schema,
+    path: &mut Vec<String>,
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
@@ -1602,8 +1598,8 @@ impl Deserialize for i32 {
   }
 
   fn reader(
-    schema: &Self::Schema,
-    mut path: &mut Vec<String>,
+    _schema: &Self::Schema,
+    path: &mut Vec<String>,
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
@@ -1635,8 +1631,8 @@ impl Deserialize for u32 {
   }
 
   fn reader(
-    schema: &Self::Schema,
-    mut path: &mut Vec<String>,
+    _schema: &Self::Schema,
+    path: &mut Vec<String>,
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
@@ -1670,8 +1666,8 @@ impl Deserialize for i64 {
   }
 
   fn reader(
-    schema: &Self::Schema,
-    mut path: &mut Vec<String>,
+    _schema: &Self::Schema,
+    path: &mut Vec<String>,
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
@@ -1703,8 +1699,8 @@ impl Deserialize for u64 {
   }
 
   fn reader(
-    schema: &Self::Schema,
-    mut path: &mut Vec<String>,
+    _schema: &Self::Schema,
+    path: &mut Vec<String>,
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
@@ -1744,7 +1740,7 @@ impl Deserialize for Timestamp {
 
   fn reader(
     schema: &Self::Schema,
-    mut path: &mut Vec<String>,
+    path: &mut Vec<String>,
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
@@ -1830,35 +1826,35 @@ impl Deserialize for Timestamp {
   }
 }
 // impl Deserialize for parquet::data_type::Decimal {
-// 	type Schema = DecimalSchema;
+//  type Schema = DecimalSchema;
 // type Reader = Reader;
 // fn placeholder() -> Self::Schema {
 //
 // }
 // fn parse(schema: &Type) -> Result<(String,Self::Schema),ParquetError> {
-// 	unimplemented!()
+//  unimplemented!()
 // }
-// 	fn render(name: &str, schema: &Self::Schema) -> Type {
-// 		Type::primitive_type_builder(name, PhysicalType::DOUBLE)
-// 	.with_repetition(Repetition::REQUIRED)
-// 	.with_logical_type(LogicalType::NONE)
-// 	.with_length(-1)
-// 	.with_precision(-1)
-// 	.with_scale(-1)
-// 	.build().unwrap()
+//  fn render(name: &str, schema: &Self::Schema) -> Type {
+//    Type::primitive_type_builder(name, PhysicalType::DOUBLE)
+//  .with_repetition(Repetition::REQUIRED)
+//  .with_logical_type(LogicalType::NONE)
+//  .with_length(-1)
+//  .with_precision(-1)
+//  .with_scale(-1)
+//  .build().unwrap()
 // Type::PrimitiveType {
-// 			basic_info: BasicTypeInfo {
-// 				name: String::from(schema),
-// 				repetition: Some(Repetition::REQUIRED),
-// 				logical_type: LogicalType::DECIMAL,
-// 				id: None,
-// 			}
-// 			physical_type: PhysicalType::
-// 	}
+//      basic_info: BasicTypeInfo {
+//        name: String::from(schema),
+//        repetition: Some(Repetition::REQUIRED),
+//        logical_type: LogicalType::DECIMAL,
+//        id: None,
+//      }
+//      physical_type: PhysicalType::
+//  }
 // }
 // struct DecimalSchema {
-// 	scale: u32,
-// 	precision: u32,
+//  scale: u32,
+//  precision: u32,
 // }
 impl Deserialize for Vec<u8> {
   type Reader = ByteArrayReader;
@@ -1869,8 +1865,8 @@ impl Deserialize for Vec<u8> {
   }
 
   fn reader(
-    schema: &Self::Schema,
-    mut path: &mut Vec<String>,
+    _schema: &Self::Schema,
+    path: &mut Vec<String>,
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
@@ -1902,8 +1898,8 @@ impl Deserialize for String {
   }
 
   fn reader(
-    schema: &Self::Schema,
-    mut path: &mut Vec<String>,
+    _schema: &Self::Schema,
+    path: &mut Vec<String>,
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
@@ -1950,8 +1946,8 @@ impl Deserialize for [u8; 1024] {
   }
 
   fn reader(
-    schema: &Self::Schema,
-    mut path: &mut Vec<String>,
+    _schema: &Self::Schema,
+    path: &mut Vec<String>,
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
@@ -1989,142 +1985,147 @@ impl Deserialize for [u8; 1024] {
 }
 
 macro_rules! impl_parquet_deserialize_tuple {
-	($($t:ident $i:tt)*) => (
-		impl<$($t,)*> Reader for TupleReader<($($t,)*)> where $($t: Reader,)* {
-			type Item = ($($t::Item,)*);
+  ($($t:ident $i:tt)*) => (
+    impl<$($t,)*> Reader for TupleReader<($($t,)*)> where $($t: Reader,)* {
+      type Item = ($($t::Item,)*);
 
-			fn read_field(&mut self) -> Result<Self::Item, ParquetError> {
-				Ok((
-					$((self.0).$i.read_field()?,)*
-				))
-			}
-			fn advance_columns(&mut self) {
-				$((self.0).$i.advance_columns();)*
-			}
-			fn has_next(&self) -> bool {
-				// self.$first_name.has_next()
-				$((self.0).$i.has_next() &&)* true
-			}
-			fn current_def_level(&self) -> i16 {
-				$(if true { (self.0).$i.current_def_level() } else)*
-				{
-					panic!("Current definition level: empty group reader")
-				}
-			}
-			fn current_rep_level(&self) -> i16 {
-				$(if true { (self.0).$i.current_rep_level() } else)*
-				{
-					panic!("Current repetition level: empty group reader")
-				}
-			}
-		}
-		impl<$($t,)*> str::FromStr for RootSchema<($($t,)*),TupleSchema<($((String,$t::Schema,),)*)>> where $($t: Deserialize,)* {
-			type Err = ParquetError;
+      fn read_field(&mut self) -> Result<Self::Item, ParquetError> {
+        Ok((
+          $((self.0).$i.read_field()?,)*
+        ))
+      }
+      fn advance_columns(&mut self) {
+        $((self.0).$i.advance_columns();)*
+      }
+      fn has_next(&self) -> bool {
+        // self.$first_name.has_next()
+        $((self.0).$i.has_next() &&)* true
+      }
+      fn current_def_level(&self) -> i16 {
+        $(if true { (self.0).$i.current_def_level() } else)*
+        {
+          panic!("Current definition level: empty group reader")
+        }
+      }
+      fn current_rep_level(&self) -> i16 {
+        $(if true { (self.0).$i.current_rep_level() } else)*
+        {
+          panic!("Current repetition level: empty group reader")
+        }
+      }
+    }
+    impl<$($t,)*> str::FromStr for RootSchema<($($t,)*),TupleSchema<($((String,$t::Schema,),)*)>> where $($t: Deserialize,)* {
+      type Err = ParquetError;
 
-			fn from_str(s: &str) -> Result<Self, Self::Err> {
-				parse_message_type(s).and_then(|x|<Root<($($t,)*)> as Deserialize>::parse(&x).map_err(|err| {
-					// let x: Type = <Root<($($t,)*)> as Deserialize>::render("", &<Root<($($t,)*)> as Deserialize>::placeholder());
-					let mut a = Vec::new();
-					// print_schema(&mut a, &x);
-					ParquetError::General(format!(
-						"Types don't match schema.\nSchema is:\n{}\nBut types require:\n{}\nError: {}",
-						s,
-						String::from_utf8(a).unwrap(),
-						err
-					))
-				})).map(|x|x.1)
-			}
-		}
-		impl<$($t,)*> Debug for TupleSchema<($((String,$t,),)*)> where $($t: Debug,)* {
-			fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-				f.debug_tuple("TupleSchema")
-					$(.field(&(self.0).$i))*
-					.finish()
-			}
-		}
-		impl<$($t,)*> DebugType for TupleSchema<($((String,$t,),)*)> where $($t: DebugType,)* {
-			fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-				f.write_str("TupleSchema")
-			}
-		}
-		impl<$($t,)*> Deserialize for Root<($($t,)*)> where $($t: Deserialize,)* {
-			type Schema = RootSchema<($($t,)*),TupleSchema<($((String,$t::Schema,),)*)>>;
-			type Reader = RootReader<TupleReader<($($t::Reader,)*)>>;
+      fn from_str(s: &str) -> Result<Self, Self::Err> {
+        parse_message_type(s).and_then(|x|<Root<($($t,)*)> as Deserialize>::parse(&x).map_err(|err| {
+          // let x: Type = <Root<($($t,)*)> as Deserialize>::render("", &<Root<($($t,)*)> as Deserialize>::placeholder());
+          let a = Vec::new();
+          // print_schema(&mut a, &x);
+          ParquetError::General(format!(
+            "Types don't match schema.\nSchema is:\n{}\nBut types require:\n{}\nError: {}",
+            s,
+            String::from_utf8(a).unwrap(),
+            err
+          ))
+        })).map(|x|x.1)
+      }
+    }
+    impl<$($t,)*> Debug for TupleSchema<($((String,$t,),)*)> where $($t: Debug,)* {
+      fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        f.debug_tuple("TupleSchema")
+          $(.field(&(self.0).$i))*
+          .finish()
+      }
+    }
+    impl<$($t,)*> DebugType for TupleSchema<($((String,$t,),)*)> where $($t: DebugType,)* {
+      fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        f.write_str("TupleSchema")
+      }
+    }
+    impl<$($t,)*> Deserialize for Root<($($t,)*)> where $($t: Deserialize,)* {
+      type Schema = RootSchema<($($t,)*),TupleSchema<($((String,$t::Schema,),)*)>>;
+      type Reader = RootReader<TupleReader<($($t::Reader,)*)>>;
 
-			fn parse(schema: &Type) -> Result<(String,Self::Schema),ParquetError> {
-				if schema.is_schema() {
-					let mut fields = schema.get_fields().iter();
-					let schema_ = RootSchema(schema.name().to_owned(), TupleSchema(($(fields.next().ok_or(ParquetError::General(String::from("Group missing field"))).and_then(|x|$t::parse(&**x))?,)*)), PhantomData);
-					if fields.next().is_none() {
-						return Ok((String::from(""), schema_))
-					}
-				}
-				Err(ParquetError::General(String::from("")))
-			}
-			fn reader(schema: &Self::Schema, mut path: &mut Vec<String>, curr_def_level: i16, curr_rep_level: i16, paths: &mut HashMap<ColumnPath, (ColumnDescPtr,ColumnReader)>) -> Self::Reader {
-				RootReader(<($($t,)*) as Deserialize>::reader(&schema.1, path, curr_def_level, curr_rep_level, paths))
-			}
-		}
-		impl<$($t,)*> Deserialize for ($($t,)*) where $($t: Deserialize,)* {
-			type Schema = TupleSchema<($((String,$t::Schema,),)*)>;
-			type Reader = TupleReader<($($t::Reader,)*)>;
+      fn parse(schema: &Type) -> Result<(String,Self::Schema),ParquetError> {
+        if schema.is_schema() {
+          let mut fields = schema.get_fields().iter();
+          let schema_ = RootSchema(schema.name().to_owned(), TupleSchema(($(fields.next().ok_or(ParquetError::General(String::from("Group missing field"))).and_then(|x|$t::parse(&**x))?,)*)), PhantomData);
+          if fields.next().is_none() {
+            return Ok((String::from(""), schema_))
+          }
+        }
+        Err(ParquetError::General(String::from("")))
+      }
+      fn reader(schema: &Self::Schema, path: &mut Vec<String>, curr_def_level: i16, curr_rep_level: i16, paths: &mut HashMap<ColumnPath, (ColumnDescPtr,ColumnReader)>) -> Self::Reader {
+        RootReader(<($($t,)*) as Deserialize>::reader(&schema.1, path, curr_def_level, curr_rep_level, paths))
+      }
+    }
+    impl<$($t,)*> Deserialize for ($($t,)*) where $($t: Deserialize,)* {
+      type Schema = TupleSchema<($((String,$t::Schema,),)*)>;
+      type Reader = TupleReader<($($t::Reader,)*)>;
 
-			fn parse(schema: &Type) -> Result<(String,Self::Schema),ParquetError> {
-				if schema.is_group() && !schema.is_schema() && schema.get_basic_info().repetition() == Repetition::REQUIRED {
-					let mut fields = schema.get_fields().iter();
-					let schema_ = TupleSchema(($(fields.next().ok_or(ParquetError::General(String::from("Group missing field"))).and_then(|x|$t::parse(&**x))?,)*));
-					if fields.next().is_none() {
-						return Ok((schema.name().to_owned(), schema_))
-					}
-				}
-				Err(ParquetError::General(String::from("")))
-			}
-			fn reader(schema: &Self::Schema, mut path: &mut Vec<String>, curr_def_level: i16, curr_rep_level: i16, paths: &mut HashMap<ColumnPath, (ColumnDescPtr,ColumnReader)>) -> Self::Reader {
-				$(
-					path.push((schema.0).$i.0.to_owned());
-					let $t = <$t as Deserialize>::reader(&(schema.0).$i.1, path, curr_def_level, curr_rep_level, paths);
-					path.pop().unwrap();
-				)*;
-				TupleReader(($($t,)*))
-			}
-		}
-		// impl<$($t,)*> Deserialize for Option<($($t,)*)> where $($t: Deserialize,)* {
-		// 	type Schema = OptionSchema<TupleSchema<($((String,$t::Schema,),)*)>>;
-		// 	type Reader = OptionReader<TupleReader<($($t::Reader,)*)>>;
+      fn parse(schema: &Type) -> Result<(String,Self::Schema),ParquetError> {
+        if schema.is_group() && !schema.is_schema() && schema.get_basic_info().repetition() == Repetition::REQUIRED {
+          let mut fields = schema.get_fields().iter();
+          let schema_ = TupleSchema(($(fields.next().ok_or(ParquetError::General(String::from("Group missing field"))).and_then(|x|$t::parse(&**x))?,)*));
+          if fields.next().is_none() {
+            return Ok((schema.name().to_owned(), schema_))
+          }
+        }
+        Err(ParquetError::General(String::from("")))
+      }
+      #[allow(unused_variables)]
+      fn reader(schema: &Self::Schema, path: &mut Vec<String>, curr_def_level: i16, curr_rep_level: i16, paths: &mut HashMap<ColumnPath, (ColumnDescPtr,ColumnReader)>) -> Self::Reader {
+        $(
+          path.push((schema.0).$i.0.to_owned());
+          #[allow(non_snake_case)]
+          let $t = <$t as Deserialize>::reader(&(schema.0).$i.1, path, curr_def_level, curr_rep_level, paths);
+          path.pop().unwrap();
+        )*;
+        TupleReader(($($t,)*))
+      }
+    }
+    // impl<$($t,)*> Deserialize for Option<($($t,)*)> where $($t: Deserialize,)* {
+    //  type Schema = OptionSchema<TupleSchema<($((String,$t::Schema,),)*)>>;
+    //  type Reader = OptionReader<TupleReader<($($t::Reader,)*)>>;
 
-		// 	fn parse(schema: &Type) -> Result<(String,Self::Schema),ParquetError> {
-		// 		if schema.is_group() && !schema.is_schema() && schema.get_basic_info().repetition() == Repetition::OPTIONAL {
-		// 			let mut fields = schema.get_fields().iter();
-		// 			let schema_ = OptionSchema(TupleSchema(($(fields.next().ok_or(ParquetError::General(String::from("Group missing field"))).and_then(|x|$t::parse(&**x))?,)*)));
-		// 			if fields.next().is_none() {
-		// 				return Ok((schema.name().to_owned(), schema_))
-		// 			}
-		// 		}
-		// 		Err(ParquetError::General(String::from("")))
-		// 	}
-		// 	fn reader(schema: &Self::Schema, mut path: &mut Vec<String>, curr_def_level: i16, curr_rep_level: i16, paths: &mut HashMap<ColumnPath, (ColumnDescPtr,ColumnReader)>) -> Self::Reader {
-		// 		OptionReader{def_level: curr_def_level, reader: <($($t,)*) as Deserialize>::reader(&schema.0, path, curr_def_level+1, curr_rep_level, paths)}
-		// 	}
-		// }
-		impl<$($t,)*> Downcast<($($t,)*)> for Value where Value: $(Downcast<$t> +)* {
-			fn downcast(self) -> Result<($($t,)*),ParquetError> {
-				let mut fields = self.as_group()?.0.into_iter();
-				Ok(($({$i;fields.next().unwrap().downcast()?},)*))
-			}
-		}
-		impl<$($t,)*> Downcast<TupleSchema<($((String,$t,),)*)>> for ValueSchema where ValueSchema: $(Downcast<$t> +)* {
-			fn downcast(self) -> Result<TupleSchema<($((String,$t,),)*)>,ParquetError> {
-				let group = self.as_group()?;
-				let mut fields = group.0.into_iter();
-				let mut names = vec![None; group.1.len()];
-				for (name,&index) in group.1.iter() {
-					names[index].replace(name.to_owned());
-				}
-				let mut names = names.into_iter().map(Option::unwrap);
-				Ok(TupleSchema(($({$i;(names.next().unwrap(),fields.next().unwrap().downcast()?)},)*)))
-			}
-		}
-	);
+    //  fn parse(schema: &Type) -> Result<(String,Self::Schema),ParquetError> {
+    //    if schema.is_group() && !schema.is_schema() && schema.get_basic_info().repetition() == Repetition::OPTIONAL {
+    //      let mut fields = schema.get_fields().iter();
+    //      let schema_ = OptionSchema(TupleSchema(($(fields.next().ok_or(ParquetError::General(String::from("Group missing field"))).and_then(|x|$t::parse(&**x))?,)*)));
+    //      if fields.next().is_none() {
+    //        return Ok((schema.name().to_owned(), schema_))
+    //      }
+    //    }
+    //    Err(ParquetError::General(String::from("")))
+    //  }
+    //  fn reader(schema: &Self::Schema, path: &mut Vec<String>, curr_def_level: i16, curr_rep_level: i16, paths: &mut HashMap<ColumnPath, (ColumnDescPtr,ColumnReader)>) -> Self::Reader {
+    //    OptionReader{def_level: curr_def_level, reader: <($($t,)*) as Deserialize>::reader(&schema.0, path, curr_def_level+1, curr_rep_level, paths)}
+    //  }
+    // }
+    impl<$($t,)*> Downcast<($($t,)*)> for Value where Value: $(Downcast<$t> +)* {
+      fn downcast(self) -> Result<($($t,)*),ParquetError> {
+        #[allow(unused_mut,unused_variables)]
+        let mut fields = self.as_group()?.0.into_iter();
+        Ok(($({$i;fields.next().unwrap().downcast()?},)*))
+      }
+    }
+    impl<$($t,)*> Downcast<TupleSchema<($((String,$t,),)*)>> for ValueSchema where ValueSchema: $(Downcast<$t> +)* {
+      fn downcast(self) -> Result<TupleSchema<($((String,$t,),)*)>,ParquetError> {
+        let group = self.as_group()?;
+        #[allow(unused_mut,unused_variables)]
+        let mut fields = group.0.into_iter();
+        let mut names = vec![None; group.1.len()];
+        for (name,&index) in group.1.iter() {
+          names[index].replace(name.to_owned());
+        }
+        #[allow(unused_mut,unused_variables)]
+        let mut names = names.into_iter().map(Option::unwrap);
+        Ok(TupleSchema(($({$i;(names.next().unwrap(),fields.next().unwrap().downcast()?)},)*)))
+      }
+    }
+  );
 }
 
 impl_parquet_deserialize_tuple!();
