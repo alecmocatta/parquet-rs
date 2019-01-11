@@ -67,7 +67,7 @@ pub fn get_decoder<T: DataType>(
     Encoding::RLE_DICTIONARY | Encoding::PLAIN_DICTIONARY => {
       return Err(general_err!(
         "Cannot initialize this encoding through this function"
-      ))
+      ));
     },
     Encoding::RLE => Box::new(RleValueDecoder::new()),
     Encoding::DELTA_BINARY_PACKED => Box::new(DeltaBitPackDecoder::new()),
@@ -936,7 +936,7 @@ mod tests {
       Int96::new(40, 50, 60),
     ];
     let data_bytes = Int96Type::to_byte_array(&data[..]);
-    let mut buffer = vec![Int96::new(0,0,0); 4];
+    let mut buffer = vec![Int96::new(0, 0, 0); 4];
     test_plain_decode::<Int96Type>(
       ByteBufferPtr::new(data_bytes),
       4,

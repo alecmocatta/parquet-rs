@@ -18,22 +18,22 @@
 //! Contains implementation of record assembly and converting Parquet types into
 //! [`Row`](`::record::api::Row`)s.
 
-use std::{collections::HashMap, fmt, rc::Rc};
-use basic::{LogicalType, Repetition};
+use super::{
+  types::{Group, List, Map, Root, Timestamp, Value},
+  DebugType, Deserialize,
+};
+use basic::{LogicalType, Repetition, Type as PhysicalType};
+use data_type::{
+  BoolType, ByteArrayType, DoubleType, FixedLenByteArrayType, FloatType, Int32Type,
+  Int64Type, Int96, Int96Type,
+};
 use errors::{ParquetError, Result};
 use file::reader::{FileReader, RowGroupReader};
-use record::{
-  // api::{make_list, make_map, make_row, Field, Row},
-  // triplet::TripletIter,
-};
-use schema::types::{ColumnPath, SchemaDescPtr, SchemaDescriptor, Type, TypePtr};
 use record::triplet::TypedTripletIter;
-use data_type::{BoolType, Int32Type, Int64Type, Int96Type, FloatType, DoubleType, ByteArrayType, FixedLenByteArrayType, Int96};
-use basic::Type as PhysicalType;
-use super::{Deserialize,DebugType};
-use super::types::{Value,Group,Timestamp,List,Map,Root};
-use std::{convert::TryInto,marker::PhantomData};
-use std::error::Error;
+use schema::types::{ColumnPath, SchemaDescPtr, SchemaDescriptor, Type, TypePtr};
+use std::{
+  collections::HashMap, convert::TryInto, error::Error, fmt, marker::PhantomData, rc::Rc,
+};
 
 // /// Tree builder for `Reader` enum.
 // /// Serves as a container of options for building a reader tree and a builder, and
@@ -58,8 +58,8 @@ use std::error::Error;
 //   }
 
 //   /// Creates new root reader for provided schema and row group.
-//   pub fn build(&self, descr: SchemaDescPtr, row_group_reader: &RowGroupReader) -> Reader {
-//     // Prepare lookup table of column path -> original column index
+//   pub fn build(&self, descr: SchemaDescPtr, row_group_reader: &RowGroupReader) ->
+// Reader {     // Prepare lookup table of column path -> original column index
 //     // This allows to prune columns and map schema leaf nodes to the column readers
 //     let mut paths: HashMap<ColumnPath, usize> = HashMap::new();
 //     let row_group_metadata = row_group_reader.metadata();
@@ -131,29 +131,38 @@ use std::error::Error;
 //         .column(orig_index)
 //         .column_descr_ptr();
 //       let col_reader = row_group_reader.get_column_reader(orig_index).unwrap();
-//       let (max_def_level, max_rep_level) = (col_descr.max_def_level(), col_descr.max_rep_level());
-//       match col_descr.physical_type() {
+//       let (max_def_level, max_rep_level) = (col_descr.max_def_level(),
+// col_descr.max_rep_level());       match col_descr.physical_type() {
 //         PhysicalType::BOOLEAN => {
-//           Reader::BoolReader(BoolReader{column: TypedTripletIter::<BoolType>::new(max_def_level, max_rep_level, self.batch_size, col_reader)})
-//         },
+//           Reader::BoolReader(BoolReader{column:
+// TypedTripletIter::<BoolType>::new(max_def_level, max_rep_level, self.batch_size,
+// col_reader)})         },
 //         PhysicalType::INT32 => {
-//           Reader::I32Reader(I32Reader{column: TypedTripletIter::<Int32Type>::new(max_def_level, max_rep_level, self.batch_size, col_reader)})
-//         },
+//           Reader::I32Reader(I32Reader{column:
+// TypedTripletIter::<Int32Type>::new(max_def_level, max_rep_level, self.batch_size,
+// col_reader)})         },
 //         PhysicalType::INT64 => {
-//           Reader::I64Reader(I64Reader{column: TypedTripletIter::<Int64Type>::new(max_def_level, max_rep_level, self.batch_size, col_reader)})
-//         },
+//           Reader::I64Reader(I64Reader{column:
+// TypedTripletIter::<Int64Type>::new(max_def_level, max_rep_level, self.batch_size,
+// col_reader)})         },
 //         PhysicalType::INT96 => {
-//           Reader::I96Reader(I96Reader{column: TypedTripletIter::<Int96Type>::new(max_def_level, max_rep_level, self.batch_size, col_reader)})
-//         },
+//           Reader::I96Reader(I96Reader{column:
+// TypedTripletIter::<Int96Type>::new(max_def_level, max_rep_level, self.batch_size,
+// col_reader)})         },
 //         PhysicalType::FLOAT => {
-//           Reader::F32Reader(F32Reader{column: TypedTripletIter::<FloatType>::new(max_def_level, max_rep_level, self.batch_size, col_reader)})
-//         },
+//           Reader::F32Reader(F32Reader{column:
+// TypedTripletIter::<FloatType>::new(max_def_level, max_rep_level, self.batch_size,
+// col_reader)})         },
 //         PhysicalType::DOUBLE => {
-//           Reader::F64Reader(F64Reader{column: TypedTripletIter::<DoubleType>::new(max_def_level, max_rep_level, self.batch_size, col_reader)})
-//         },
-//         PhysicalType::BYTE_ARRAY => Reader::ByteArrayReader(ByteArrayReader{column: TypedTripletIter::<ByteArrayType>::new(max_def_level, max_rep_level, self.batch_size, col_reader)}),
-//         PhysicalType::FIXED_LEN_BYTE_ARRAY => Reader::FixedLenByteArrayReader(FixedLenByteArrayReader{column: TypedTripletIter::<FixedLenByteArrayType>::new(max_def_level, max_rep_level, self.batch_size, col_reader)}),
-//       }
+//           Reader::F64Reader(F64Reader{column:
+// TypedTripletIter::<DoubleType>::new(max_def_level, max_rep_level, self.batch_size,
+// col_reader)})         },
+//         PhysicalType::BYTE_ARRAY => Reader::ByteArrayReader(ByteArrayReader{column:
+// TypedTripletIter::<ByteArrayType>::new(max_def_level, max_rep_level, self.batch_size,
+// col_reader)}),         PhysicalType::FIXED_LEN_BYTE_ARRAY =>
+// Reader::FixedLenByteArrayReader(FixedLenByteArrayReader{column:
+// TypedTripletIter::<FixedLenByteArrayType>::new(max_def_level, max_rep_level,
+// self.batch_size, col_reader)}),       }
 //     } else {
 //       match field.get_basic_info().logical_type() {
 //         // List types
@@ -323,8 +332,8 @@ use std::error::Error;
 //     path.pop();
 
 //     if repetition == Repetition::OPTIONAL {
-//       Reader::OptionReader(OptionReader{def_level: curr_def_level - 1, reader: Box::new(reader)})
-//     } else {
+//       Reader::OptionReader(OptionReader{def_level: curr_def_level - 1, reader:
+// Box::new(reader)})     } else {
 //       reader
 //     }
 //   }
@@ -355,8 +364,8 @@ use std::error::Error;
 //     //    }
 //     //
 //     repeated_type.is_group() && repeated_type.get_fields().len() > 1 ||
-//     // For legacy 2-level list types generated by parquet-avro (Parquet version < 1.6.0),
-//     // e.g.:
+//     // For legacy 2-level list types generated by parquet-avro (Parquet version <
+// 1.6.0),     // e.g.:
 //     //
 //     //    // ARRAY<STRUCT<str: STRING>> (nullable list, non-null elements)
 //     //    optional group my_list (LIST) {
@@ -379,7 +388,12 @@ use std::error::Error;
 //   }
 // }
 
-impl<A,B,C> Reader for sum::Sum3<A,B,C> where A: Reader, B: Reader<Item=A::Item>, C: Reader<Item=A::Item> {
+impl<A, B, C> Reader for sum::Sum3<A, B, C>
+where
+  A: Reader,
+  B: Reader<Item = A::Item>,
+  C: Reader<Item = A::Item>,
+{
   type Item = A::Item;
 
   fn read_field(&mut self) -> Result<Self::Item> {
@@ -389,6 +403,7 @@ impl<A,B,C> Reader for sum::Sum3<A,B,C> where A: Reader, B: Reader<Item=A::Item>
       sum::Sum3::C(ref mut reader) => reader.read_field(),
     }
   }
+
   fn advance_columns(&mut self) {
     match self {
       sum::Sum3::A(ref mut reader) => reader.advance_columns(),
@@ -396,6 +411,7 @@ impl<A,B,C> Reader for sum::Sum3<A,B,C> where A: Reader, B: Reader<Item=A::Item>
       sum::Sum3::C(ref mut reader) => reader.advance_columns(),
     }
   }
+
   fn has_next(&self) -> bool {
     match self {
       sum::Sum3::A(ref reader) => reader.has_next(),
@@ -403,6 +419,7 @@ impl<A,B,C> Reader for sum::Sum3<A,B,C> where A: Reader, B: Reader<Item=A::Item>
       sum::Sum3::C(ref reader) => reader.has_next(),
     }
   }
+
   fn current_def_level(&self) -> i16 {
     match self {
       sum::Sum3::A(ref reader) => reader.current_def_level(),
@@ -410,6 +427,7 @@ impl<A,B,C> Reader for sum::Sum3<A,B,C> where A: Reader, B: Reader<Item=A::Item>
       sum::Sum3::C(ref reader) => reader.current_def_level(),
     }
   }
+
   fn current_rep_level(&self) -> i16 {
     match self {
       sum::Sum3::A(ref reader) => reader.current_rep_level(),
@@ -418,7 +436,6 @@ impl<A,B,C> Reader for sum::Sum3<A,B,C> where A: Reader, B: Reader<Item=A::Item>
     }
   }
 }
-
 
 pub struct BoolReader {
   pub column: TypedTripletIter<BoolType>,
@@ -451,9 +468,9 @@ pub struct OptionReader<R> {
 pub struct RepeatedReader<R> {
   pub def_level: i16,
   pub rep_level: i16,
-  pub reader: R
+  pub reader: R,
 }
-pub struct KeyValueReader<K,V> {
+pub struct KeyValueReader<K, V> {
   pub def_level: i16,
   pub rep_level: i16,
   pub keys_reader: K,
@@ -479,24 +496,20 @@ impl Reader for BoolReader {
     self.column.read_next().unwrap();
     Ok(value)
   }
-  fn advance_columns(&mut self) {
-    self.column.read_next().unwrap();
-  }
+
+  fn advance_columns(&mut self) { self.column.read_next().unwrap(); }
+
   // fn field_name(&self) -> &str {
   //   self.field.name()
   // }
   // fn repetition(&self) -> Repetition {
   //   self.field.get_basic_info().repetition()
   // }
-  fn has_next(&self) -> bool {
-    self.column.has_next()
-  }
-  fn current_def_level(&self) -> i16 {
-    self.column.current_def_level()
-  }
-  fn current_rep_level(&self) -> i16 {
-    self.column.current_rep_level()
-  }
+  fn has_next(&self) -> bool { self.column.has_next() }
+
+  fn current_def_level(&self) -> i16 { self.column.current_def_level() }
+
+  fn current_rep_level(&self) -> i16 { self.column.current_rep_level() }
 }
 impl Reader for I32Reader {
   type Item = i32;
@@ -506,24 +519,20 @@ impl Reader for I32Reader {
     self.column.read_next().unwrap();
     Ok(value)
   }
-  fn advance_columns(&mut self) {
-    self.column.read_next().unwrap();
-  }
+
+  fn advance_columns(&mut self) { self.column.read_next().unwrap(); }
+
   // fn field_name(&self) -> &str {
   //   self.field.name()
   // }
   // fn repetition(&self) -> Repetition {
   //   self.field.get_basic_info().repetition()
   // }
-  fn has_next(&self) -> bool {
-    self.column.has_next()
-  }
-  fn current_def_level(&self) -> i16 {
-    self.column.current_def_level()
-  }
-  fn current_rep_level(&self) -> i16 {
-    self.column.current_rep_level()
-  }
+  fn has_next(&self) -> bool { self.column.has_next() }
+
+  fn current_def_level(&self) -> i16 { self.column.current_def_level() }
+
+  fn current_rep_level(&self) -> i16 { self.column.current_rep_level() }
 }
 impl Reader for I64Reader {
   type Item = i64;
@@ -533,24 +542,20 @@ impl Reader for I64Reader {
     self.column.read_next().unwrap();
     Ok(value)
   }
-  fn advance_columns(&mut self) {
-    self.column.read_next().unwrap();
-  }
+
+  fn advance_columns(&mut self) { self.column.read_next().unwrap(); }
+
   // fn field_name(&self) -> &str {
   //   self.field.name()
   // }
   // fn repetition(&self) -> Repetition {
   //   self.field.get_basic_info().repetition()
   // }
-  fn has_next(&self) -> bool {
-    self.column.has_next()
-  }
-  fn current_def_level(&self) -> i16 {
-    self.column.current_def_level()
-  }
-  fn current_rep_level(&self) -> i16 {
-    self.column.current_rep_level()
-  }
+  fn has_next(&self) -> bool { self.column.has_next() }
+
+  fn current_def_level(&self) -> i16 { self.column.current_def_level() }
+
+  fn current_rep_level(&self) -> i16 { self.column.current_rep_level() }
 }
 impl Reader for I96Reader {
   type Item = Int96;
@@ -560,24 +565,20 @@ impl Reader for I96Reader {
     self.column.read_next().unwrap();
     Ok(value)
   }
-  fn advance_columns(&mut self) {
-    self.column.read_next().unwrap();
-  }
+
+  fn advance_columns(&mut self) { self.column.read_next().unwrap(); }
+
   // fn field_name(&self) -> &str {
   //   self.field.name()
   // }
   // fn repetition(&self) -> Repetition {
   //   self.field.get_basic_info().repetition()
   // }
-  fn has_next(&self) -> bool {
-    self.column.has_next()
-  }
-  fn current_def_level(&self) -> i16 {
-    self.column.current_def_level()
-  }
-  fn current_rep_level(&self) -> i16 {
-    self.column.current_rep_level()
-  }
+  fn has_next(&self) -> bool { self.column.has_next() }
+
+  fn current_def_level(&self) -> i16 { self.column.current_def_level() }
+
+  fn current_rep_level(&self) -> i16 { self.column.current_rep_level() }
 }
 impl Reader for F32Reader {
   type Item = f32;
@@ -587,24 +588,20 @@ impl Reader for F32Reader {
     self.column.read_next().unwrap();
     Ok(value)
   }
-  fn advance_columns(&mut self) {
-    self.column.read_next().unwrap();
-  }
+
+  fn advance_columns(&mut self) { self.column.read_next().unwrap(); }
+
   // fn field_name(&self) -> &str {
   //   self.field.name()
   // }
   // fn repetition(&self) -> Repetition {
   //   self.field.get_basic_info().repetition()
   // }
-  fn has_next(&self) -> bool {
-    self.column.has_next()
-  }
-  fn current_def_level(&self) -> i16 {
-    self.column.current_def_level()
-  }
-  fn current_rep_level(&self) -> i16 {
-    self.column.current_rep_level()
-  }
+  fn has_next(&self) -> bool { self.column.has_next() }
+
+  fn current_def_level(&self) -> i16 { self.column.current_def_level() }
+
+  fn current_rep_level(&self) -> i16 { self.column.current_rep_level() }
 }
 impl Reader for F64Reader {
   type Item = f64;
@@ -614,24 +611,20 @@ impl Reader for F64Reader {
     self.column.read_next().unwrap();
     Ok(value)
   }
-  fn advance_columns(&mut self) {
-    self.column.read_next().unwrap();
-  }
+
+  fn advance_columns(&mut self) { self.column.read_next().unwrap(); }
+
   // fn field_name(&self) -> &str {
   //   self.field.name()
   // }
   // fn repetition(&self) -> Repetition {
   //   self.field.get_basic_info().repetition()
   // }
-  fn has_next(&self) -> bool {
-    self.column.has_next()
-  }
-  fn current_def_level(&self) -> i16 {
-    self.column.current_def_level()
-  }
-  fn current_rep_level(&self) -> i16 {
-    self.column.current_rep_level()
-  }
+  fn has_next(&self) -> bool { self.column.has_next() }
+
+  fn current_def_level(&self) -> i16 { self.column.current_def_level() }
+
+  fn current_rep_level(&self) -> i16 { self.column.current_rep_level() }
 }
 impl Reader for ByteArrayReader {
   type Item = Vec<u8>;
@@ -641,24 +634,20 @@ impl Reader for ByteArrayReader {
     self.column.read_next().unwrap();
     Ok(value)
   }
-  fn advance_columns(&mut self) {
-    self.column.read_next().unwrap();
-  }
+
+  fn advance_columns(&mut self) { self.column.read_next().unwrap(); }
+
   // fn field_name(&self) -> &str {
   //   self.field.name()
   // }
   // fn repetition(&self) -> Repetition {
   //   self.field.get_basic_info().repetition()
   // }
-  fn has_next(&self) -> bool {
-    self.column.has_next()
-  }
-  fn current_def_level(&self) -> i16 {
-    self.column.current_def_level()
-  }
-  fn current_rep_level(&self) -> i16 {
-    self.column.current_rep_level()
-  }
+  fn has_next(&self) -> bool { self.column.has_next() }
+
+  fn current_def_level(&self) -> i16 { self.column.current_def_level() }
+
+  fn current_rep_level(&self) -> i16 { self.column.current_rep_level() }
 }
 impl Reader for FixedLenByteArrayReader {
   type Item = Vec<u8>;
@@ -668,24 +657,20 @@ impl Reader for FixedLenByteArrayReader {
     self.column.read_next().unwrap();
     Ok(value)
   }
-  fn advance_columns(&mut self) {
-    self.column.read_next().unwrap();
-  }
+
+  fn advance_columns(&mut self) { self.column.read_next().unwrap(); }
+
   // fn field_name(&self) -> &str {
   //   self.field.name()
   // }
   // fn repetition(&self) -> Repetition {
   //   self.field.get_basic_info().repetition()
   // }
-  fn has_next(&self) -> bool {
-    self.column.has_next()
-  }
-  fn current_def_level(&self) -> i16 {
-    self.column.current_def_level()
-  }
-  fn current_rep_level(&self) -> i16 {
-    self.column.current_rep_level()
-  }
+  fn has_next(&self) -> bool { self.column.has_next() }
+
+  fn current_def_level(&self) -> i16 { self.column.current_def_level() }
+
+  fn current_rep_level(&self) -> i16 { self.column.current_rep_level() }
 }
 impl<R: Reader> Reader for OptionReader<R> {
   type Item = Option<R::Item>;
@@ -698,11 +683,11 @@ impl<R: Reader> Reader for OptionReader<R> {
       Ok(None)
     }
   }
-  fn advance_columns(&mut self) {
-    self.reader.advance_columns();
-  }
-  // pub fn read_option(&mut self, mut f: impl FnMut(&mut Reader) -> Result<()>) -> Result<()> {
-  //   if self.reader.current_def_level() > self.def_level {
+
+  fn advance_columns(&mut self) { self.reader.advance_columns(); }
+
+  // pub fn read_option(&mut self, mut f: impl FnMut(&mut Reader) -> Result<()>) ->
+  // Result<()> {   if self.reader.current_def_level() > self.def_level {
   //     f(&mut self.reader)?
   //   } else {
   //     self.reader.advance_columns();
@@ -715,15 +700,11 @@ impl<R: Reader> Reader for OptionReader<R> {
   // fn repetition(&self) -> Repetition {
   //   self.reader.repetition()
   // }
-  fn has_next(&self) -> bool {
-    self.reader.has_next()
-  }
-  fn current_def_level(&self) -> i16 {
-    self.reader.current_def_level()
-  }
-  fn current_rep_level(&self) -> i16 {
-    self.reader.current_rep_level()
-  }
+  fn has_next(&self) -> bool { self.reader.has_next() }
+
+  fn current_def_level(&self) -> i16 { self.reader.current_def_level() }
+
+  fn current_rep_level(&self) -> i16 { self.reader.current_rep_level() }
 }
 
 impl<R: Reader> Reader for RepeatedReader<R> {
@@ -750,11 +731,11 @@ impl<R: Reader> Reader for RepeatedReader<R> {
     }
     Ok(elements)
   }
-  fn advance_columns(&mut self) {
-    self.reader.advance_columns();
-  }
-  // pub fn read_repeated(&mut self, mut f: impl FnMut(&mut Reader) -> Result<()>) -> Result<()> {
-  //   loop {
+
+  fn advance_columns(&mut self) { self.reader.advance_columns(); }
+
+  // pub fn read_repeated(&mut self, mut f: impl FnMut(&mut Reader) -> Result<()>) ->
+  // Result<()> {   loop {
   //     if self.reader.current_def_level() > self.def_level {
   //       // elements.push(reader.read_field());
   //       f(&mut self.reader)?
@@ -780,25 +761,24 @@ impl<R: Reader> Reader for RepeatedReader<R> {
   // fn repetition(&self) -> Repetition {
   //   self.field.get_basic_info().repetition()
   // }
-  fn has_next(&self) -> bool {
-    self.reader.has_next()
-  }
-  fn current_def_level(&self) -> i16 {
-    self.reader.current_def_level()
-  }
-  fn current_rep_level(&self) -> i16 {
-    self.reader.current_rep_level()
-  }
+  fn has_next(&self) -> bool { self.reader.has_next() }
+
+  fn current_def_level(&self) -> i16 { self.reader.current_def_level() }
+
+  fn current_rep_level(&self) -> i16 { self.reader.current_rep_level() }
 }
 
 impl<K: Reader, V: Reader> Reader for KeyValueReader<K, V> {
-  type Item = Vec<(K::Item,V::Item)>;
+  type Item = Vec<(K::Item, V::Item)>;
 
   fn read_field(&mut self) -> Result<Self::Item> {
     let mut pairs = Vec::new();
     loop {
       if self.keys_reader.current_def_level() > self.def_level {
-        pairs.push((self.keys_reader.read_field()?, self.values_reader.read_field()?));
+        pairs.push((
+          self.keys_reader.read_field()?,
+          self.values_reader.read_field()?,
+        ));
       } else {
         self.keys_reader.advance_columns();
         self.values_reader.advance_columns();
@@ -810,23 +790,27 @@ impl<K: Reader, V: Reader> Reader for KeyValueReader<K, V> {
 
       // This covers case when we are out of repetition levels and should close the
       // group, or there are no values left to buffer.
-      if !self.keys_reader.has_next() || self.keys_reader.current_rep_level() <= self.rep_level {
+      if !self.keys_reader.has_next()
+        || self.keys_reader.current_rep_level() <= self.rep_level
+      {
         break;
       }
     }
 
     Ok(pairs)
   }
+
   fn advance_columns(&mut self) {
     self.keys_reader.advance_columns();
     self.values_reader.advance_columns();
   }
-  // pub fn read_key_value(&mut self, mut f: impl FnMut(&mut Reader, &mut Reader) -> Result<()>) -> Result<()> {
-  //   loop {
+
+  // pub fn read_key_value(&mut self, mut f: impl FnMut(&mut Reader, &mut Reader) ->
+  // Result<()>) -> Result<()> {   loop {
   //     if self.keys_reader.current_def_level() > self.def_level {
-  //       // pairs.push((self.keys_reader.read_field(), self.values_reader.read_field()));
-  //       f(&mut self.keys_reader, &mut self.values_reader)?
-  //     } else {
+  //       // pairs.push((self.keys_reader.read_field(),
+  // self.values_reader.read_field()));       f(&mut self.keys_reader, &mut
+  // self.values_reader)?     } else {
   //       self.keys_reader.advance_columns();
   //       self.values_reader.advance_columns();
   //       // If the current definition level is equal to the definition level of this
@@ -837,8 +821,8 @@ impl<K: Reader, V: Reader> Reader for KeyValueReader<K, V> {
 
   //     // This covers case when we are out of repetition levels and should close the
   //     // group, or there are no values left to buffer.
-  //     if !self.keys_reader.has_next() || self.keys_reader.current_rep_level() <= self.rep_level {
-  //       break;
+  //     if !self.keys_reader.has_next() || self.keys_reader.current_rep_level() <=
+  // self.rep_level {       break;
   //     }
   //   }
   //   Ok(())
@@ -849,21 +833,17 @@ impl<K: Reader, V: Reader> Reader for KeyValueReader<K, V> {
   // fn repetition(&self) -> Repetition {
   //   self.field.get_basic_info().repetition()
   // }
-  fn has_next(&self) -> bool {
-    self.keys_reader.has_next()
-  }
-  fn current_def_level(&self) -> i16 {
-    self.keys_reader.current_def_level()
-  }
-  fn current_rep_level(&self) -> i16 {
-    self.keys_reader.current_rep_level()
-  }
+  fn has_next(&self) -> bool { self.keys_reader.has_next() }
+
+  fn current_def_level(&self) -> i16 { self.keys_reader.current_def_level() }
+
+  fn current_rep_level(&self) -> i16 { self.keys_reader.current_rep_level() }
 }
 
 pub struct GroupReader {
   pub(super) def_level: i16,
   pub(super) readers: Vec<ValueReader>,
-  pub(super) fields: Rc<HashMap<String,usize>>,
+  pub(super) fields: Rc<HashMap<String, usize>>,
 }
 impl Reader for GroupReader {
   type Item = Group;
@@ -875,20 +855,22 @@ impl Reader for GroupReader {
     }
     Ok(Group(fields, self.fields.clone()))
   }
+
   fn advance_columns(&mut self) {
     for reader in self.readers.iter_mut() {
       reader.advance_columns();
     }
   }
-  fn has_next(&self) -> bool {
-    self.readers.first().unwrap().has_next()
-  }
+
+  fn has_next(&self) -> bool { self.readers.first().unwrap().has_next() }
+
   fn current_def_level(&self) -> i16 {
     match self.readers.first() {
-        Some(reader) => reader.current_def_level(),
-        None => panic!("Current definition level: empty group reader"),
-      }
+      Some(reader) => reader.current_def_level(),
+      None => panic!("Current definition level: empty group reader"),
+    }
   }
+
   fn current_rep_level(&self) -> i16 {
     match self.readers.first() {
       Some(reader) => reader.current_rep_level(),
@@ -913,7 +895,7 @@ pub enum ValueReader {
   Array(<Vec<u8> as Deserialize>::Reader),
   String(<String as Deserialize>::Reader),
   List(Box<<List<Value> as Deserialize>::Reader>),
-  Map(Box<<Map<Value,Value> as Deserialize>::Reader>),
+  Map(Box<<Map<Value, Value> as Deserialize>::Reader>),
   Group(<Group as Deserialize>::Reader),
   Option(Box<<Option<Value> as Deserialize>::Reader>),
 }
@@ -939,9 +921,12 @@ impl Reader for ValueReader {
       ValueReader::List(ref mut reader) => reader.read_field().map(Value::List),
       ValueReader::Map(ref mut reader) => reader.read_field().map(Value::Map),
       ValueReader::Group(ref mut reader) => reader.read_field().map(Value::Group),
-      ValueReader::Option(ref mut reader) => reader.read_field().map(|x|Value::Option(Box::new(x))),
+      ValueReader::Option(ref mut reader) => {
+        reader.read_field().map(|x| Value::Option(Box::new(x)))
+      },
     }
   }
+
   fn advance_columns(&mut self) {
     match self {
       ValueReader::Bool(ref mut reader) => reader.advance_columns(),
@@ -964,6 +949,7 @@ impl Reader for ValueReader {
       ValueReader::Option(ref mut reader) => reader.advance_columns(),
     }
   }
+
   fn has_next(&self) -> bool {
     match self {
       ValueReader::Bool(ref reader) => reader.has_next(),
@@ -986,6 +972,7 @@ impl Reader for ValueReader {
       ValueReader::Option(ref reader) => reader.has_next(),
     }
   }
+
   fn current_def_level(&self) -> i16 {
     match self {
       ValueReader::Bool(ref reader) => reader.current_def_level(),
@@ -1008,6 +995,7 @@ impl Reader for ValueReader {
       ValueReader::Option(ref reader) => reader.current_def_level(),
     }
   }
+
   fn current_rep_level(&self) -> i16 {
     match self {
       ValueReader::Bool(ref reader) => reader.current_rep_level(),
@@ -1035,66 +1023,63 @@ impl Reader for ValueReader {
 pub struct TupleReader<T>(pub(super) T);
 
 pub struct TryIntoReader<R: Reader, T>(pub(super) R, pub(super) PhantomData<fn(T)>);
-impl<R: Reader, T> Reader for TryIntoReader<R, T> where R::Item: TryInto<T>, <R::Item as TryInto<T>>::Error: Error {
+impl<R: Reader, T> Reader for TryIntoReader<R, T>
+where
+  R::Item: TryInto<T>,
+  <R::Item as TryInto<T>>::Error: Error,
+{
   type Item = T;
 
   fn read_field(&mut self) -> Result<Self::Item> {
-    self.0.read_field().and_then(|x|x.try_into().map_err(|err|ParquetError::General(err.description().to_owned())))
+    self.0.read_field().and_then(|x| {
+      x.try_into()
+        .map_err(|err| ParquetError::General(err.description().to_owned()))
+    })
   }
-  fn advance_columns(&mut self) {
-    self.0.advance_columns()
-  }
-  fn has_next(&self) -> bool {
-    self.0.has_next()
-  }
-  fn current_def_level(&self) -> i16 {
-    self.0.current_def_level()
-  }
-  fn current_rep_level(&self) -> i16 {
-    self.0.current_rep_level()
-  }
+
+  fn advance_columns(&mut self) { self.0.advance_columns() }
+
+  fn has_next(&self) -> bool { self.0.has_next() }
+
+  fn current_def_level(&self) -> i16 { self.0.current_def_level() }
+
+  fn current_rep_level(&self) -> i16 { self.0.current_rep_level() }
 }
 
 pub struct MapReader<R: Reader, F>(pub(super) R, pub(super) F);
-impl<R: Reader, F, T> Reader for MapReader<R, F> where F: FnMut(R::Item) -> Result<T> {
+impl<R: Reader, F, T> Reader for MapReader<R, F>
+where F: FnMut(R::Item) -> Result<T>
+{
   type Item = T;
 
   fn read_field(&mut self) -> Result<Self::Item> {
     self.0.read_field().and_then(&mut self.1)
   }
-  fn advance_columns(&mut self) {
-    self.0.advance_columns()
-  }
-  fn has_next(&self) -> bool {
-    self.0.has_next()
-  }
-  fn current_def_level(&self) -> i16 {
-    self.0.current_def_level()
-  }
-  fn current_rep_level(&self) -> i16 {
-    self.0.current_rep_level()
-  }
+
+  fn advance_columns(&mut self) { self.0.advance_columns() }
+
+  fn has_next(&self) -> bool { self.0.has_next() }
+
+  fn current_def_level(&self) -> i16 { self.0.current_def_level() }
+
+  fn current_rep_level(&self) -> i16 { self.0.current_rep_level() }
 }
 
 pub struct RootReader<R>(pub R);
-impl<R> Reader for RootReader<R> where R: Reader {
+impl<R> Reader for RootReader<R>
+where R: Reader
+{
   type Item = Root<R::Item>;
 
-  fn read_field(&mut self) -> Result<Self::Item> {
-    self.0.read_field().map(Root)
-  }
-  fn advance_columns(&mut self) {
-    self.0.advance_columns();
-  }
-  fn has_next(&self) -> bool {
-    self.0.has_next()
-  }
-  fn current_def_level(&self) -> i16 {
-    self.0.current_def_level()
-  }
-  fn current_rep_level(&self) -> i16 {
-    self.0.current_rep_level()
-  }
+  fn read_field(&mut self) -> Result<Self::Item> { self.0.read_field().map(Root) }
+
+  fn advance_columns(&mut self) { self.0.advance_columns(); }
+
+  fn has_next(&self) -> bool { self.0.has_next() }
+
+  fn current_def_level(&self) -> i16 { self.0.current_def_level() }
+
+  fn current_rep_level(&self) -> i16 { self.0.current_rep_level() }
 }
 
 // /// Reader tree for record assembly
@@ -1150,25 +1135,25 @@ impl<R> Reader for RootReader<R> where R: Reader {
 //     // }
 //   // }
 
-//   // pub fn read_option(&mut self, f: impl FnMut(&mut Reader) -> Result<()>) -> Result<()> {
-//   //   if let Reader::OptionReader(ref mut option_reader) = *self {
+//   // pub fn read_option(&mut self, f: impl FnMut(&mut Reader) -> Result<()>) ->
+// Result<()> {   //   if let Reader::OptionReader(ref mut option_reader) = *self {
 //   //     option_reader.read_option(f)
 //   //   } else {
 //   //     panic!()
 //   //   }
 //   // }
 
-//   // pub fn read_repeated(&mut self, f: impl FnMut(&mut Reader) -> Result<()>) -> Result<()> {
-//   //   if let Reader::RepeatedReader(ref mut repeated_reader) = *self {
+//   // pub fn read_repeated(&mut self, f: impl FnMut(&mut Reader) -> Result<()>) ->
+// Result<()> {   //   if let Reader::RepeatedReader(ref mut repeated_reader) = *self {
 //   //     repeated_reader.read_repeated(f)
 //   //   } else {
 //   //     panic!()
 //   //   }
 //   // }
 
-//   // pub fn read_key_value(&mut self, f: impl FnMut(&mut Reader, &mut Reader) -> Result<()>) -> Result<()> {
-//   //   if let Reader::KeyValueReader(ref mut key_value_reader) = *self {
-//   //     key_value_reader.read_key_value(f)
+//   // pub fn read_key_value(&mut self, f: impl FnMut(&mut Reader, &mut Reader) ->
+// Result<()>) -> Result<()> {   //   if let Reader::KeyValueReader(ref mut
+// key_value_reader) = *self {   //     key_value_reader.read_key_value(f)
 //   //   } else {
 //   //     panic!()
 //   //   }
@@ -1179,37 +1164,43 @@ impl<R> Reader for RootReader<R> where R: Reader {
 //   pub fn read_field(&mut self) -> Field {
 //     unimplemented!()
 //     // match *self {
-//     //   Reader::BoolReader(ref mut primitive_reader) => Value::Bool(primitive_reader.read_field()),
-//     //   Reader::I32Reader(ref mut primitive_reader) => Value::I32(primitive_reader.read_field()),
-//     //   Reader::I64Reader(ref mut primitive_reader) => Value::I64(primitive_reader.read_field()),
-//     //   Reader::I96Reader(ref mut primitive_reader) => Value::I96(primitive_reader.read_field()),
-//     //   Reader::F32Reader(ref mut primitive_reader) => Value::F32(primitive_reader.read_field()),
-//     //   Reader::F64Reader(ref mut primitive_reader) => Value::F64(primitive_reader.read_field()),
-//     //   Reader::ByteArrayReader(ref mut primitive_reader) => Value::ByteArray(primitive_reader.read_field()),
-//     //   Reader::FixedLenByteArrayReader(ref mut primitive_reader) => Value::FixedLenByteArray(primitive_reader.read_field()),
-//     //   Reader::OptionReader(ref mut option_reader) => Value::Option(option_reader.read_field()),
-//     //   Reader::GroupReader(ref mut group_reader) => Value::Group(group_reader.read_field()),
-//     //   Reader::RepeatedReader(ref mut repeated_reader) => Value::Repeated(repeated_reader.read_field()),
-//     //   Reader::KeyValueReader(ref mut key_value_reader) => Value::KeyValue(key_value_reader.read_field()),
-//     // }
+//     //   Reader::BoolReader(ref mut primitive_reader) =>
+// Value::Bool(primitive_reader.read_field()),     //   Reader::I32Reader(ref mut
+// primitive_reader) => Value::I32(primitive_reader.read_field()),     //   Reader::
+// I64Reader(ref mut primitive_reader) => Value::I64(primitive_reader.read_field()),     //
+// Reader::I96Reader(ref mut primitive_reader) =>
+// Value::I96(primitive_reader.read_field()),     //   Reader::F32Reader(ref mut
+// primitive_reader) => Value::F32(primitive_reader.read_field()),     //   Reader::
+// F64Reader(ref mut primitive_reader) => Value::F64(primitive_reader.read_field()),     //
+// Reader::ByteArrayReader(ref mut primitive_reader) =>
+// Value::ByteArray(primitive_reader.read_field()),     //   Reader::
+// FixedLenByteArrayReader(ref mut primitive_reader) =>
+// Value::FixedLenByteArray(primitive_reader.read_field()),     //   Reader::
+// OptionReader(ref mut option_reader) => Value::Option(option_reader.read_field()),     //
+// Reader::GroupReader(ref mut group_reader) => Value::Group(group_reader.read_field()),
+//     //   Reader::RepeatedReader(ref mut repeated_reader) =>
+// Value::Repeated(repeated_reader.read_field()),     //   Reader::KeyValueReader(ref mut
+// key_value_reader) => Value::KeyValue(key_value_reader.read_field()),     // }
 //   }
 
 //   /// Advances leaf columns for the current reader.
 //   pub fn advance_columns(&mut self) {
 //     unimplemented!()
 //     // match *self {
-//     //   Reader::BoolReader(ref mut primitive_reader) => primitive_reader.advance_columns(),
-//     //   Reader::I32Reader(ref mut primitive_reader) => primitive_reader.advance_columns(),
-//     //   Reader::I64Reader(ref mut primitive_reader) => primitive_reader.advance_columns(),
-//     //   Reader::I96Reader(ref mut primitive_reader) => primitive_reader.advance_columns(),
-//     //   Reader::F32Reader(ref mut primitive_reader) => primitive_reader.advance_columns(),
-//     //   Reader::F64Reader(ref mut primitive_reader) => primitive_reader.advance_columns(),
-//     //   Reader::ByteArrayReader(ref mut primitive_reader) => primitive_reader.advance_columns(),
-//     //   Reader::FixedLenByteArrayReader(ref mut primitive_reader) => primitive_reader.advance_columns(),
-//     //   Reader::OptionReader(ref mut option_reader) => option_reader.advance_columns(),
-//     //   Reader::GroupReader(ref mut group_reader) => group_reader.advance_columns(),
-//     //   Reader::RepeatedReader(ref mut repeated_reader) => repeated_reader.advance_columns(),
-//     //   Reader::KeyValueReader(ref mut key_value_reader) => key_value_reader.advance_columns(),
+//     //   Reader::BoolReader(ref mut primitive_reader) =>
+// primitive_reader.advance_columns(),     //   Reader::I32Reader(ref mut
+// primitive_reader) => primitive_reader.advance_columns(),     //   Reader::I64Reader(ref
+// mut primitive_reader) => primitive_reader.advance_columns(),     //   Reader::
+// I96Reader(ref mut primitive_reader) => primitive_reader.advance_columns(),     //   Reader:
+// :F32Reader(ref mut primitive_reader) => primitive_reader.advance_columns(),     //   Reader:
+// :F64Reader(ref mut primitive_reader) => primitive_reader.advance_columns(),     //   Reader:
+// :ByteArrayReader(ref mut primitive_reader) => primitive_reader.advance_columns(),     //
+// Reader::FixedLenByteArrayReader(ref mut primitive_reader) =>
+// primitive_reader.advance_columns(),     //   Reader::OptionReader(ref mut
+// option_reader) => option_reader.advance_columns(),     //   Reader::GroupReader(ref mut
+// group_reader) => group_reader.advance_columns(),     //   Reader::RepeatedReader(ref
+// mut repeated_reader) => repeated_reader.advance_columns(),     //   Reader::
+// KeyValueReader(ref mut key_value_reader) => key_value_reader.advance_columns(),
 //     // }
 //   }
 
@@ -1223,14 +1214,14 @@ impl<R> Reader for RootReader<R> where R: Reader {
 //   //   //   Reader::I96Reader(ref primitive_reader) => primitive_reader.field_name(),
 //   //   //   Reader::F32Reader(ref primitive_reader) => primitive_reader.field_name(),
 //   //   //   Reader::F64Reader(ref primitive_reader) => primitive_reader.field_name(),
-//   //   //   Reader::ByteArrayReader(ref primitive_reader) => primitive_reader.field_name(),
-//   //   //   Reader::FixedLenByteArrayReader(ref primitive_reader) => primitive_reader.field_name(),
-//   //   //   Reader::OptionReader(ref option_reader) => option_reader.field_name(),
-//   //   //   Reader::GroupReader(ref group_reader) => group_reader.field_name(),
-//   //   //   Reader::RepeatedReader(ref repeated_reader) => repeated_reader.field_name(),
-//   //   //   Reader::KeyValueReader(ref key_value_reader) => key_value_reader.field_name(),
-//   //   // }
-//   // }
+//   //   //   Reader::ByteArrayReader(ref primitive_reader) =>
+// primitive_reader.field_name(),   //   //   Reader::FixedLenByteArrayReader(ref
+// primitive_reader) => primitive_reader.field_name(),   //   //
+// Reader::OptionReader(ref option_reader) => option_reader.field_name(),   //   //
+// Reader::GroupReader(ref group_reader) => group_reader.field_name(),   //   //
+// Reader::RepeatedReader(ref repeated_reader) => repeated_reader.field_name(),   //   //
+// Reader::KeyValueReader(ref key_value_reader) => key_value_reader.field_name(),   //   //
+// }   // }
 
 //   // /// Returns repetition for the current reader.
 //   // fn repetition(&self) -> Repetition {
@@ -1242,14 +1233,14 @@ impl<R> Reader for RootReader<R> where R: Reader {
 //   //   //   Reader::I96Reader(ref primitive_reader) => primitive_reader.repetition(),
 //   //   //   Reader::F32Reader(ref primitive_reader) => primitive_reader.repetition(),
 //   //   //   Reader::F64Reader(ref primitive_reader) => primitive_reader.repetition(),
-//   //   //   Reader::ByteArrayReader(ref primitive_reader) => primitive_reader.repetition(),
-//   //   //   Reader::FixedLenByteArrayReader(ref primitive_reader) => primitive_reader.repetition(),
-//   //   //   Reader::OptionReader(ref option_reader) => option_reader.repetition(),
-//   //   //   Reader::GroupReader(ref group_reader) => group_reader.repetition(),
-//   //   //   Reader::RepeatedReader(ref repeated_reader) => repeated_reader.repetition(),
-//   //   //   Reader::KeyValueReader(ref key_value_reader) => key_value_reader.repetition(),
-//   //   // }
-//   // }
+//   //   //   Reader::ByteArrayReader(ref primitive_reader) =>
+// primitive_reader.repetition(),   //   //   Reader::FixedLenByteArrayReader(ref
+// primitive_reader) => primitive_reader.repetition(),   //   //
+// Reader::OptionReader(ref option_reader) => option_reader.repetition(),   //   //
+// Reader::GroupReader(ref group_reader) => group_reader.repetition(),   //   //
+// Reader::RepeatedReader(ref repeated_reader) => repeated_reader.repetition(),   //   //
+// Reader::KeyValueReader(ref key_value_reader) => key_value_reader.repetition(),   //   //
+// }   // }
 
 //   /// Returns true, if current reader has more values, false otherwise.
 //   /// Method does not advance internal iterator.
@@ -1263,12 +1254,12 @@ impl<R> Reader for RootReader<R> where R: Reader {
 //     //   Reader::F32Reader(ref primitive_reader) => primitive_reader.has_next(),
 //     //   Reader::F64Reader(ref primitive_reader) => primitive_reader.has_next(),
 //     //   Reader::ByteArrayReader(ref primitive_reader) => primitive_reader.has_next(),
-//     //   Reader::FixedLenByteArrayReader(ref primitive_reader) => primitive_reader.has_next(),
-//     //   Reader::OptionReader(ref option_reader) => option_reader.has_next(),
-//     //   Reader::GroupReader(ref group_reader) => group_reader.has_next(),
-//     //   Reader::RepeatedReader(ref repeated_reader) => repeated_reader.has_next(),
-//     //   Reader::KeyValueReader(ref key_value_reader) => key_value_reader.has_next(),
-//     // }
+//     //   Reader::FixedLenByteArrayReader(ref primitive_reader) =>
+// primitive_reader.has_next(),     //   Reader::OptionReader(ref option_reader) =>
+// option_reader.has_next(),     //   Reader::GroupReader(ref group_reader) =>
+// group_reader.has_next(),     //   Reader::RepeatedReader(ref repeated_reader) =>
+// repeated_reader.has_next(),     //   Reader::KeyValueReader(ref key_value_reader) =>
+// key_value_reader.has_next(),     // }
 //   }
 
 //   /// Returns current definition level,
@@ -1276,19 +1267,20 @@ impl<R> Reader for RootReader<R> where R: Reader {
 //   fn current_def_level(&self) -> i16 {
 //     unimplemented!()
 //     // match *self {
-//     //   Reader::BoolReader(ref primitive_reader) => primitive_reader.current_def_level(),
-//     //   Reader::I32Reader(ref primitive_reader) => primitive_reader.current_def_level(),
-//     //   Reader::I64Reader(ref primitive_reader) => primitive_reader.current_def_level(),
-//     //   Reader::I96Reader(ref primitive_reader) => primitive_reader.current_def_level(),
-//     //   Reader::F32Reader(ref primitive_reader) => primitive_reader.current_def_level(),
-//     //   Reader::F64Reader(ref primitive_reader) => primitive_reader.current_def_level(),
-//     //   Reader::ByteArrayReader(ref primitive_reader) => primitive_reader.current_def_level(),
-//     //   Reader::FixedLenByteArrayReader(ref primitive_reader) => primitive_reader.current_def_level(),
-//     //   Reader::OptionReader(ref option_reader) => option_reader.current_def_level(),
-//     //   Reader::GroupReader(ref group_reader) => group_reader.current_def_level(),
-//     //   Reader::RepeatedReader(ref repeated_reader) => repeated_reader.current_def_level(),
-//     //   Reader::KeyValueReader(ref key_value_reader) => key_value_reader.current_def_level(),
-//     // }
+//     //   Reader::BoolReader(ref primitive_reader) =>
+// primitive_reader.current_def_level(),     //   Reader::I32Reader(ref primitive_reader)
+// => primitive_reader.current_def_level(),     //   Reader::I64Reader(ref
+// primitive_reader) => primitive_reader.current_def_level(),     //   Reader::
+// I96Reader(ref primitive_reader) => primitive_reader.current_def_level(),     //   Reader:
+// :F32Reader(ref primitive_reader) => primitive_reader.current_def_level(),     //   Reader:
+// :F64Reader(ref primitive_reader) => primitive_reader.current_def_level(),     //   Reader:
+// :ByteArrayReader(ref primitive_reader) => primitive_reader.current_def_level(),     //
+// Reader::FixedLenByteArrayReader(ref primitive_reader) =>
+// primitive_reader.current_def_level(),     //   Reader::OptionReader(ref option_reader)
+// => option_reader.current_def_level(),     //   Reader::GroupReader(ref group_reader) =>
+// group_reader.current_def_level(),     //   Reader::RepeatedReader(ref repeated_reader)
+// => repeated_reader.current_def_level(),     //   Reader::KeyValueReader(ref
+// key_value_reader) => key_value_reader.current_def_level(),     // }
 //   }
 
 //   /// Returns current repetition level.
@@ -1296,19 +1288,20 @@ impl<R> Reader for RootReader<R> where R: Reader {
 //   fn current_rep_level(&self) -> i16 {
 //     unimplemented!()
 //     // match *self {
-//     //   Reader::BoolReader(ref primitive_reader) => primitive_reader.current_rep_level(),
-//     //   Reader::I32Reader(ref primitive_reader) => primitive_reader.current_rep_level(),
-//     //   Reader::I64Reader(ref primitive_reader) => primitive_reader.current_rep_level(),
-//     //   Reader::I96Reader(ref primitive_reader) => primitive_reader.current_rep_level(),
-//     //   Reader::F32Reader(ref primitive_reader) => primitive_reader.current_rep_level(),
-//     //   Reader::F64Reader(ref primitive_reader) => primitive_reader.current_rep_level(),
-//     //   Reader::ByteArrayReader(ref primitive_reader) => primitive_reader.current_rep_level(),
-//     //   Reader::FixedLenByteArrayReader(ref primitive_reader) => primitive_reader.current_rep_level(),
-//     //   Reader::OptionReader(ref option_reader) => option_reader.current_rep_level(),
-//     //   Reader::GroupReader(ref group_reader) => group_reader.current_rep_level(),
-//     //   Reader::RepeatedReader(ref repeated_reader) => repeated_reader.current_rep_level(),
-//     //   Reader::KeyValueReader(ref key_value_reader) => key_value_reader.current_rep_level(),
-//     // }
+//     //   Reader::BoolReader(ref primitive_reader) =>
+// primitive_reader.current_rep_level(),     //   Reader::I32Reader(ref primitive_reader)
+// => primitive_reader.current_rep_level(),     //   Reader::I64Reader(ref
+// primitive_reader) => primitive_reader.current_rep_level(),     //   Reader::
+// I96Reader(ref primitive_reader) => primitive_reader.current_rep_level(),     //   Reader:
+// :F32Reader(ref primitive_reader) => primitive_reader.current_rep_level(),     //   Reader:
+// :F64Reader(ref primitive_reader) => primitive_reader.current_rep_level(),     //   Reader:
+// :ByteArrayReader(ref primitive_reader) => primitive_reader.current_rep_level(),     //
+// Reader::FixedLenByteArrayReader(ref primitive_reader) =>
+// primitive_reader.current_rep_level(),     //   Reader::OptionReader(ref option_reader)
+// => option_reader.current_rep_level(),     //   Reader::GroupReader(ref group_reader) =>
+// group_reader.current_rep_level(),     //   Reader::RepeatedReader(ref repeated_reader)
+// => repeated_reader.current_rep_level(),     //   Reader::KeyValueReader(ref
+// key_value_reader) => key_value_reader.current_rep_level(),     // }
 //   }
 // }
 
@@ -1368,7 +1361,7 @@ impl<'a> RowIter<'a> {
   pub fn from_row_group(proj: Option<Type>, reader: &'a RowGroupReader) -> Result<Self> {
     let descr = Self::get_proj_descr(proj, reader.metadata().schema_descr_ptr())?;
     // let tree_builder = Self::tree_builder();
-    let row_iter = unimplemented!();// tree_builder.as_iter(descr.clone(), reader);
+    let row_iter = unimplemented!(); // tree_builder.as_iter(descr.clone(), reader);
 
     // For row group we need to set `current_row_group` >= `num_row_groups`, because we
     // only have one row group and can't buffer more.
@@ -1428,11 +1421,11 @@ impl<'a> Iterator for RowIter<'a> {
         .get_row_group(self.current_row_group)
         .unwrap();
       self.current_row_group += 1;
-      let mut iter = unimplemented!();// self
-        // .tree_builder
-        // .as_iter(self.descr.clone(), row_group_reader);
-      // row = iter.next();
-      // self.row_iter = Some(iter);
+      let mut iter = unimplemented!(); // self
+                                       // .tree_builder
+                                       // .as_iter(self.descr.clone(), row_group_reader);
+                                       // row = iter.next();
+                                       // self.row_iter = Some(iter);
     }
 
     row
@@ -1464,7 +1457,8 @@ impl Iterator for ReaderIter {
     if self.records_left > 0 {
       self.records_left -= 1;
       unimplemented!()
-      // Some(if let Field::Group(row) = self.root_reader.read_field() { row } else { unreachable!() })
+    // Some(if let Field::Group(row) = self.root_reader.read_field() { row } else {
+    // unreachable!() })
     } else {
       None
     }
@@ -1906,8 +1900,8 @@ impl Iterator for ReaderIter {
 //       }
 //     ";
 //     let schema = parse_message_type(&schema).unwrap();
-//     let rows = test_file_reader_rows("nested_maps.snappy.parquet", Some(schema)).unwrap();
-//     let expected_rows = vec![
+//     let rows = test_file_reader_rows("nested_maps.snappy.parquet",
+// Some(schema)).unwrap();     let expected_rows = vec![
 //       row![
 //         ("c".to_string(), Field::Double(1.0)),
 //         ("b".to_string(), Field::Int(1))
@@ -1954,8 +1948,8 @@ impl Iterator for ReaderIter {
 //       }
 //     ";
 //     let schema = parse_message_type(&schema).unwrap();
-//     let rows = test_file_reader_rows("nested_maps.snappy.parquet", Some(schema)).unwrap();
-//     let expected_rows = vec![
+//     let rows = test_file_reader_rows("nested_maps.snappy.parquet",
+// Some(schema)).unwrap();     let expected_rows = vec![
 //       row![(
 //         "a".to_string(),
 //         map![(

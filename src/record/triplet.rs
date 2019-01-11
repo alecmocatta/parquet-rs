@@ -73,8 +73,8 @@ use schema::types::ColumnDescPtr;
 //         TripletIter::FloatTripletIter(TypedTripletIter::new(descr, batch_size, reader))
 //       },
 //       PhysicalType::DOUBLE => {
-//         TripletIter::DoubleTripletIter(TypedTripletIter::new(descr, batch_size, reader))
-//       },
+//         TripletIter::DoubleTripletIter(TypedTripletIter::new(descr, batch_size,
+// reader))       },
 //       PhysicalType::BYTE_ARRAY => TripletIter::ByteArrayTripletIter(
 //         TypedTripletIter::new(descr, batch_size, reader),
 //       ),
@@ -91,8 +91,8 @@ use schema::types::ColumnDescPtr;
 //     triplet_enum_func!(self, read_next, ref, mut)
 //   }
 
-//   /// Provides check on values/levels left without invoking the underlying typed triplet
-//   /// iterator.
+//   /// Provides check on values/levels left without invoking the underlying typed
+// triplet   /// iterator.
 //   /// Returns true if more values/levels exist, false otherwise.
 //   /// It is always in sync with `read_next` method.
 //   #[inline]
@@ -180,7 +180,13 @@ pub struct TypedTripletIter<T: DataType> {
 impl<T: DataType> TypedTripletIter<T> {
   /// Creates new typed triplet iterator based on provided column reader.
   /// Use batch size to specify the amount of values to buffer from column reader.
-  pub fn new(max_def_level: i16, max_rep_level: i16, batch_size: usize, column_reader: ColumnReader) -> Self {
+  pub fn new(
+    max_def_level: i16,
+    max_rep_level: i16,
+    batch_size: usize,
+    column_reader: ColumnReader,
+  ) -> Self
+  {
     assert_ne!(batch_size, 0, "Expected positive batch size");
 
     // let max_def_level = descr.max_def_level();
@@ -229,7 +235,8 @@ impl<T: DataType> TypedTripletIter<T> {
   #[inline]
   pub fn current_value(&self) -> &T::T {
     assert_eq!(
-      self.current_def_level(), self.max_def_level,
+      self.current_def_level(),
+      self.max_def_level,
       "Cannot extract value, max definition level: {}, current level: {}",
       self.max_def_level,
       self.current_def_level()

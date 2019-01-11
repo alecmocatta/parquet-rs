@@ -449,7 +449,8 @@ macro_rules! nyi {
 
 //   /// Converts Parquet BOOLEAN type with logical type into `bool` value.
 //   #[inline]
-//   pub fn convert_bool(_descr: &ColumnDescPtr, value: bool) -> Self { Field::Bool(value) }
+//   pub fn convert_bool(_descr: &ColumnDescPtr, value: bool) -> Self { Field::Bool(value)
+// }
 
 //   /// Converts Parquet INT32 type with logical type into `i32` value.
 //   #[inline]
@@ -505,8 +506,8 @@ macro_rules! nyi {
 //     // something similar to java.util.Date and java.util.Calendar.
 //     // if millis < 0 {
 //     //   panic!(
-//     //     "Expected non-negative milliseconds when converting Int96, found {} from {:?}",
-//     //     millis, value
+//     //     "Expected non-negative milliseconds when converting Int96, found {} from
+// {:?}",     //     millis, value
 //     //   );
 //     // }
 
@@ -515,7 +516,8 @@ macro_rules! nyi {
 
 //   /// Converts Parquet FLOAT type with logical type into `f32` value.
 //   #[inline]
-//   pub fn convert_float(_descr: &ColumnDescPtr, value: f32) -> Self { Field::Float(value) }
+//   pub fn convert_float(_descr: &ColumnDescPtr, value: f32) -> Self {
+// Field::Float(value) }
 
 //   /// Converts Parquet DOUBLE type with logical type into `f64` value.
 //   #[inline]
@@ -796,8 +798,8 @@ mod tests {
   // }
 
   // #[test]
-  // #[should_panic(expected = "Expected non-negative milliseconds when converting Int96")]
-  // fn test_row_convert_int96_invalid() {
+  // #[should_panic(expected = "Expected non-negative milliseconds when converting
+  // Int96")] fn test_row_convert_int96_invalid() {
   //   // INT96 value does not depend on logical type
   //   let descr = make_column_descr![PhysicalType::INT96, LogicalType::NONE];
 

@@ -33,12 +33,14 @@ pub struct Int96 {
 
 impl Int96 {
   /// Creates new INT96 type struct with no data set.
-  pub fn new(elem0: u32, elem1: u32, elem2: u32) -> Self { Self { value: [elem0, elem1, elem2] } }
+  pub fn new(elem0: u32, elem1: u32, elem2: u32) -> Self {
+    Self {
+      value: [elem0, elem1, elem2],
+    }
+  }
 
   /// Returns underlying data as slice of [`u32`].
-  pub fn data(&self) -> &[u32] {
-    &self.value
-  }
+  pub fn data(&self) -> &[u32] { &self.value }
 }
 
 /// Rust representation for BYTE_ARRAY and FIXED_LEN_BYTE_ARRAY Parquet physical types.
@@ -299,16 +301,8 @@ make_type!(Int64Type, Type::INT64, i64);
 make_type!(Int96Type, Type::INT96, Int96);
 make_type!(FloatType, Type::FLOAT, f32);
 make_type!(DoubleType, Type::DOUBLE, f64);
-make_type!(
-  ByteArrayType,
-  Type::BYTE_ARRAY,
-  ByteArray
-);
-make_type!(
-  FixedLenByteArrayType,
-  Type::FIXED_LEN_BYTE_ARRAY,
-  ByteArray
-);
+make_type!(ByteArrayType, Type::BYTE_ARRAY, ByteArray);
+make_type!(FixedLenByteArrayType, Type::FIXED_LEN_BYTE_ARRAY, ByteArray);
 
 #[cfg(test)]
 mod tests {
