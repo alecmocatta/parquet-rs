@@ -20,6 +20,28 @@
 mod api;
 pub mod reader;
 mod triplet;
+pub mod schemas;
+pub mod types;
 
+use std::{fmt,fmt::Debug};
+use schema::types::ColumnDescPtr;
+use schema::types::ColumnPath;
+use std::collections::HashMap;
+use errors::ParquetError;
+use schema::types::Type;
+use record::reader::Reader;
+use column::reader::ColumnReader;
 // pub use self::api::{List, ListAccessor, Map, MapAccessor, Row, RowAccessor};
-pub use self::triplet::TypedTripletIter;
+// pub use self::triplet::TypedTripletIter;
+
+pub trait DebugType {
+	fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error>;
+}
+
+pub trait Deserialize: Sized {
+	type Schema: Debug + DebugType;
+	type Reader: Reader<Item = Self>;
+
+	fn parse(schema: &Type) -> Result<(String,Self::Schema),ParquetError>;
+	fn reader(schema: &Self::Schema, mut path: &mut Vec<String>, curr_def_level: i16, curr_rep_level: i16, paths: &mut HashMap<ColumnPath, (ColumnDescPtr,ColumnReader)>) -> Self::Reader;
+}

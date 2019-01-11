@@ -124,6 +124,9 @@
 #![feature(rustc_private)]
 #![feature(specialization)]
 #![feature(try_from)]
+#![feature(existential_type)]
+#![feature(maybe_uninit)]
+#![feature(nll)]
 #![allow(dead_code)]
 #![allow(non_camel_case_types)]
 
