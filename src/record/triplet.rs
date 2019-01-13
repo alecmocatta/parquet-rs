@@ -343,7 +343,7 @@ impl<T: DataType> TypedTripletIter<T> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use file::reader::{FileReader, SerializedFileReader};
+  use file::reader::SerializedFileReader;
   use schema::types::ColumnPath;
   use util::test_common::get_test_file;
 

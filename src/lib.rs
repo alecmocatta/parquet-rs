@@ -63,16 +63,19 @@
 //! ```
 //! #![feature(try_from)]
 //!
-//! use parquet::file::reader::{FileReader, SerializedFileReader};
+//! use parquet::{
+//!   file::reader::{FileReader, SerializedFileReader},
+//!   record::types::Value,
+//! };
 //! use std::convert::TryFrom;
 //!
 //! let reader = SerializedFileReader::try_from("data/alltypes_plain.parquet").unwrap();
 //!
 //! // Reading data using record API with optional projection schema.
-//! let mut iter = reader.get_row_iter(None).unwrap();
+//! let mut iter = reader.get_row_iter::<Value>(None).unwrap();
 //! while let Some(record) = iter.next() {
 //!   // See record API for different field accessors
-//!   println!("{}", record);
+//!   println!("{:?}", record);
 //! }
 //! ```
 //!

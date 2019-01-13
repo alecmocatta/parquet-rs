@@ -659,7 +659,13 @@ mod tests {
     writer.close().unwrap();
 
     let reader = SerializedFileReader::new(file).unwrap();
-    assert_eq!(reader.get_row_iter(None).unwrap().count(), 0);
+    assert_eq!(
+      reader
+        .get_row_iter::<crate::record::types::Value>(None)
+        .unwrap()
+        .count(),
+      0
+    );
   }
 
   #[test]
@@ -895,50 +901,65 @@ mod tests {
   /// File write-read roundtrip.
   /// `data` consists of arrays of values for each row group.
   fn test_file_roundtrip(file: File, data: Vec<Vec<i32>>) {
-    unimplemented!()
-    // let schema = Rc::new(
-    //   types::Type::group_type_builder("schema")
-    //     .with_fields(&mut vec![Rc::new(
-    //       types::Type::primitive_type_builder("col1", Type::INT32)
-    //         .with_repetition(Repetition::REQUIRED)
-    //         .build()
-    //         .unwrap(),
-    //     )])
-    //     .build()
-    //     .unwrap(),
-    // );
-    // let props = Rc::new(WriterProperties::builder().build());
-    // let mut file_writer =
-    //   SerializedFileWriter::new(file.try_clone().unwrap(), schema, props).unwrap();
+    let schema = Rc::new(
+      types::Type::group_type_builder("schema")
+        .with_fields(&mut vec![Rc::new(
+          types::Type::primitive_type_builder("col1", Type::INT32)
+            .with_repetition(Repetition::REQUIRED)
+            .build()
+            .unwrap(),
+        )])
+        .build()
+        .unwrap(),
+    );
+    let props = Rc::new(WriterProperties::builder().build());
+    let mut file_writer =
+      SerializedFileWriter::new(file.try_clone().unwrap(), schema, props).unwrap();
 
-    // for subset in &data {
-    //   let mut row_group_writer = file_writer.next_row_group().unwrap();
-    //   let mut col_writer = row_group_writer.next_column().unwrap();
-    //   if let Some(mut writer) = col_writer {
-    //     match writer {
-    //       ColumnWriter::Int32ColumnWriter(ref mut typed) => {
-    //         typed.write_batch(&subset[..], None, None).unwrap();
-    //       },
-    //       _ => {
-    //         unimplemented!();
-    //       },
-    //     }
-    //     row_group_writer.close_column(writer).unwrap();
-    //   }
-    //   file_writer.close_row_group(row_group_writer).unwrap();
-    // }
+    for subset in &data {
+      let mut row_group_writer = file_writer.next_row_group().unwrap();
+      let mut col_writer = row_group_writer.next_column().unwrap();
+      if let Some(mut writer) = col_writer {
+        match writer {
+          ColumnWriter::Int32ColumnWriter(ref mut typed) => {
+            typed.write_batch(&subset[..], None, None).unwrap();
+          },
+          _ => {
+            unimplemented!();
+          },
+        }
+        row_group_writer.close_column(writer).unwrap();
+      }
+      file_writer.close_row_group(row_group_writer).unwrap();
+    }
 
-    // file_writer.close().unwrap();
+    file_writer.close().unwrap();
 
-    // let reader = SerializedFileReader::new(file).unwrap();
-    // assert_eq!(reader.num_row_groups(), data.len());
-    // for i in 0..reader.num_row_groups() {
-    //   let row_group_reader = reader.get_row_group(i).unwrap();
-    //   let iter = row_group_reader.get_row_iter(None).unwrap();
-    //   let res = iter
-    //     .map(|elem| elem.get_int(0).unwrap())
-    //     .collect::<Vec<i32>>();
-    //   assert_eq!(res, data[i]);
-    // }
+    let reader = SerializedFileReader::new(file).unwrap();
+    assert_eq!(reader.num_row_groups(), data.len());
+    for i in 0..reader.num_row_groups() {
+      let row_group_reader = reader.get_row_group(i).unwrap();
+      // let iter =
+      // row_group_reader.get_row_iter::<crate::record::types::Value>(None).unwrap();
+      let iter = crate::record::reader::RowIter::<
+        SerializedFileReader<File>,
+        crate::record::types::Value,
+      >::from_row_group(None, &*row_group_reader)
+      .unwrap();
+      let res = iter
+        .map(|elem| {
+          elem
+            .as_group()
+            .unwrap()
+            .0
+            .into_iter()
+            .next()
+            .unwrap()
+            .as_i32()
+            .unwrap()
+        })
+        .collect::<Vec<i32>>();
+      assert_eq!(res, data[i]);
+    }
   }
 }
