@@ -1047,16 +1047,24 @@ impl Deserialize for Group {
   type Schema = GroupSchema;
 
   fn parse(schema: &Type) -> Result<(String, Self::Schema), ParquetError> {
-    if schema.is_group() && !schema.is_schema() && schema.get_basic_info().repetition() == Repetition::REQUIRED {
+    if schema.is_group()
+      && !schema.is_schema()
+      && schema.get_basic_info().repetition() == Repetition::REQUIRED
+    {
       let mut map = HashMap::new();
-      let fields = schema.get_fields().iter().enumerate().map(|(i,field)| {
-        let (name, schema) = <Value as Deserialize>::parse(&**field)?;
-        let x = map.insert(name, i);
-        assert!(x.is_none());
-        Ok(schema)
-      }).collect::<Result<Vec<ValueSchema>,ParquetError>>()?;
-      let schema_ = GroupSchema(fields, map);//$struct_schema{$($name: fields.get(stringify!($name)).ok_or(ParquetError::General(format!("Struct {} missing field {}", stringify!($struct), stringify!($name)))).and_then(|x|<$type_ as Deserialize>::parse(&**x))?.1,)*};
-      return Ok((schema.name().to_owned(), schema_))
+      let fields = schema
+        .get_fields()
+        .iter()
+        .enumerate()
+        .map(|(i, field)| {
+          let (name, schema) = <Value as Deserialize>::parse(&**field)?;
+          let x = map.insert(name, i);
+          assert!(x.is_none());
+          Ok(schema)
+        })
+        .collect::<Result<Vec<ValueSchema>, ParquetError>>()?;
+      let schema_ = GroupSchema(fields, map);
+      return Ok((schema.name().to_owned(), schema_));
     }
     Err(ParquetError::General(format!(
       "Struct {}",
@@ -1092,6 +1100,54 @@ impl Deserialize for Group {
       readers,
       fields: Rc::new(schema.1.clone()),
     }
+  }
+}
+
+impl Deserialize for Root<Group> {
+  type Reader = RootReader<GroupReader>;
+  type Schema = RootSchema<Group, GroupSchema>;
+
+  fn parse(schema: &Type) -> Result<(String, Self::Schema), ParquetError> {
+    if schema.is_schema() {
+      let mut map = HashMap::new();
+      let fields = schema
+        .get_fields()
+        .iter()
+        .enumerate()
+        .map(|(i, field)| {
+          let (name, schema) = <Value as Deserialize>::parse(&**field)?;
+          let x = map.insert(name, i);
+          assert!(x.is_none());
+          Ok(schema)
+        })
+        .collect::<Result<Vec<ValueSchema>, ParquetError>>()?;
+      let schema_ = GroupSchema(fields, map);
+      return Ok((
+        String::from(""),
+        RootSchema(schema.name().to_owned(), schema_, PhantomData),
+      ));
+    }
+    Err(ParquetError::General(format!(
+      "Struct {}",
+      stringify!($struct)
+    )))
+  }
+
+  fn reader(
+    schema: &Self::Schema,
+    path: &mut Vec<String>,
+    curr_def_level: i16,
+    curr_rep_level: i16,
+    paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
+  ) -> Self::Reader
+  {
+    RootReader(Group::reader(
+      &schema.1,
+      path,
+      curr_def_level,
+      curr_rep_level,
+      paths,
+    ))
   }
 }
 

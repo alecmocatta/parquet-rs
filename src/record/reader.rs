@@ -481,8 +481,6 @@ pub trait Reader {
   type Item;
   fn read_field(&mut self) -> Result<Self::Item>;
   fn advance_columns(&mut self);
-  // fn field_name(&self) -> &str;
-  // fn repetition(&self) -> Repetition;
   fn has_next(&self) -> bool;
   fn current_def_level(&self) -> i16;
   fn current_rep_level(&self) -> i16;
@@ -499,12 +497,6 @@ impl Reader for BoolReader {
 
   fn advance_columns(&mut self) { self.column.read_next().unwrap(); }
 
-  // fn field_name(&self) -> &str {
-  //   self.field.name()
-  // }
-  // fn repetition(&self) -> Repetition {
-  //   self.field.get_basic_info().repetition()
-  // }
   fn has_next(&self) -> bool { self.column.has_next() }
 
   fn current_def_level(&self) -> i16 { self.column.current_def_level() }
@@ -522,12 +514,6 @@ impl Reader for I32Reader {
 
   fn advance_columns(&mut self) { self.column.read_next().unwrap(); }
 
-  // fn field_name(&self) -> &str {
-  //   self.field.name()
-  // }
-  // fn repetition(&self) -> Repetition {
-  //   self.field.get_basic_info().repetition()
-  // }
   fn has_next(&self) -> bool { self.column.has_next() }
 
   fn current_def_level(&self) -> i16 { self.column.current_def_level() }
@@ -545,12 +531,6 @@ impl Reader for I64Reader {
 
   fn advance_columns(&mut self) { self.column.read_next().unwrap(); }
 
-  // fn field_name(&self) -> &str {
-  //   self.field.name()
-  // }
-  // fn repetition(&self) -> Repetition {
-  //   self.field.get_basic_info().repetition()
-  // }
   fn has_next(&self) -> bool { self.column.has_next() }
 
   fn current_def_level(&self) -> i16 { self.column.current_def_level() }
@@ -568,12 +548,6 @@ impl Reader for I96Reader {
 
   fn advance_columns(&mut self) { self.column.read_next().unwrap(); }
 
-  // fn field_name(&self) -> &str {
-  //   self.field.name()
-  // }
-  // fn repetition(&self) -> Repetition {
-  //   self.field.get_basic_info().repetition()
-  // }
   fn has_next(&self) -> bool { self.column.has_next() }
 
   fn current_def_level(&self) -> i16 { self.column.current_def_level() }
@@ -591,12 +565,6 @@ impl Reader for F32Reader {
 
   fn advance_columns(&mut self) { self.column.read_next().unwrap(); }
 
-  // fn field_name(&self) -> &str {
-  //   self.field.name()
-  // }
-  // fn repetition(&self) -> Repetition {
-  //   self.field.get_basic_info().repetition()
-  // }
   fn has_next(&self) -> bool { self.column.has_next() }
 
   fn current_def_level(&self) -> i16 { self.column.current_def_level() }
@@ -614,12 +582,6 @@ impl Reader for F64Reader {
 
   fn advance_columns(&mut self) { self.column.read_next().unwrap(); }
 
-  // fn field_name(&self) -> &str {
-  //   self.field.name()
-  // }
-  // fn repetition(&self) -> Repetition {
-  //   self.field.get_basic_info().repetition()
-  // }
   fn has_next(&self) -> bool { self.column.has_next() }
 
   fn current_def_level(&self) -> i16 { self.column.current_def_level() }
@@ -637,12 +599,6 @@ impl Reader for ByteArrayReader {
 
   fn advance_columns(&mut self) { self.column.read_next().unwrap(); }
 
-  // fn field_name(&self) -> &str {
-  //   self.field.name()
-  // }
-  // fn repetition(&self) -> Repetition {
-  //   self.field.get_basic_info().repetition()
-  // }
   fn has_next(&self) -> bool { self.column.has_next() }
 
   fn current_def_level(&self) -> i16 { self.column.current_def_level() }
@@ -660,12 +616,6 @@ impl Reader for FixedLenByteArrayReader {
 
   fn advance_columns(&mut self) { self.column.read_next().unwrap(); }
 
-  // fn field_name(&self) -> &str {
-  //   self.field.name()
-  // }
-  // fn repetition(&self) -> Repetition {
-  //   self.field.get_basic_info().repetition()
-  // }
   fn has_next(&self) -> bool { self.column.has_next() }
 
   fn current_def_level(&self) -> i16 { self.column.current_def_level() }
@@ -686,20 +636,6 @@ impl<R: Reader> Reader for OptionReader<R> {
 
   fn advance_columns(&mut self) { self.reader.advance_columns(); }
 
-  // pub fn read_option(&mut self, mut f: impl FnMut(&mut Reader) -> Result<()>) ->
-  // Result<()> {   if self.reader.current_def_level() > self.def_level {
-  //     f(&mut self.reader)?
-  //   } else {
-  //     self.reader.advance_columns();
-  //   }
-  //   Ok(())
-  // }
-  // fn field_name(&self) -> &str {
-  //   self.reader.field_name()
-  // }
-  // fn repetition(&self) -> Repetition {
-  //   self.reader.repetition()
-  // }
   fn has_next(&self) -> bool { self.reader.has_next() }
 
   fn current_def_level(&self) -> i16 { self.reader.current_def_level() }
@@ -734,33 +670,6 @@ impl<R: Reader> Reader for RepeatedReader<R> {
 
   fn advance_columns(&mut self) { self.reader.advance_columns(); }
 
-  // pub fn read_repeated(&mut self, mut f: impl FnMut(&mut Reader) -> Result<()>) ->
-  // Result<()> {   loop {
-  //     if self.reader.current_def_level() > self.def_level {
-  //       // elements.push(reader.read_field());
-  //       f(&mut self.reader)?
-  //     } else {
-  //       self.reader.advance_columns();
-  //       // If the current definition level is equal to the definition level of this
-  //       // repeated type, then the result is an empty list and the repetition level
-  //       // will always be <= rl.
-  //       break;
-  //     }
-
-  //     // This covers case when we are out of repetition levels and should close the
-  //     // group, or there are no values left to buffer.
-  //     if !self.reader.has_next() || self.reader.current_rep_level() <= self.rep_level {
-  //       break;
-  //     }
-  //   }
-  //   Ok(())
-  // }
-  // fn field_name(&self) -> &str {
-  //   self.field.name()
-  // }
-  // fn repetition(&self) -> Repetition {
-  //   self.field.get_basic_info().repetition()
-  // }
   fn has_next(&self) -> bool { self.reader.has_next() }
 
   fn current_def_level(&self) -> i16 { self.reader.current_def_level() }
@@ -805,34 +714,6 @@ impl<K: Reader, V: Reader> Reader for KeyValueReader<K, V> {
     self.values_reader.advance_columns();
   }
 
-  // pub fn read_key_value(&mut self, mut f: impl FnMut(&mut Reader, &mut Reader) ->
-  // Result<()>) -> Result<()> {   loop {
-  //     if self.keys_reader.current_def_level() > self.def_level {
-  //       // pairs.push((self.keys_reader.read_field(),
-  // self.values_reader.read_field()));       f(&mut self.keys_reader, &mut
-  // self.values_reader)?     } else {
-  //       self.keys_reader.advance_columns();
-  //       self.values_reader.advance_columns();
-  //       // If the current definition level is equal to the definition level of this
-  //       // repeated type, then the result is an empty list and the repetition level
-  //       // will always be <= rl.
-  //       break;
-  //     }
-
-  //     // This covers case when we are out of repetition levels and should close the
-  //     // group, or there are no values left to buffer.
-  //     if !self.keys_reader.has_next() || self.keys_reader.current_rep_level() <=
-  // self.rep_level {       break;
-  //     }
-  //   }
-  //   Ok(())
-  // }
-  // fn field_name(&self) -> &str {
-  //   self.field.name()
-  // }
-  // fn repetition(&self) -> Repetition {
-  //   self.field.get_basic_info().repetition()
-  // }
   fn has_next(&self) -> bool { self.keys_reader.has_next() }
 
   fn current_def_level(&self) -> i16 { self.keys_reader.current_def_level() }
@@ -1082,249 +963,6 @@ where R: Reader
   fn current_rep_level(&self) -> i16 { self.0.current_rep_level() }
 }
 
-// /// Reader tree for record assembly
-// pub enum Reader {
-//   // Primitive reader with type information and triplet iterator
-//   BoolReader(BoolReader),
-//   I32Reader(I32Reader),
-//   I64Reader(I64Reader),
-//   I96Reader(I96Reader),
-//   F32Reader(F32Reader),
-//   F64Reader(F64Reader),
-//   ByteArrayReader(ByteArrayReader),
-//   FixedLenByteArrayReader(FixedLenByteArrayReader),
-//   // Optional reader with definition level of a parent and a reader
-//   OptionReader(OptionReader<Box<Reader>>),
-//   // Group (struct) reader with type information, definition level and list of child
-//   // readers. When it represents message type, type information is None
-//   GroupReader(GroupReader<Reader>),
-//   // Reader for repeated values, e.g. lists, contains type information, definition
-//   // level, repetition level and a child reader
-//   RepeatedReader(RepeatedReader<Box<Reader>>),
-//   // Reader of key-value pairs, e.g. maps, contains type information, definition level,
-//   // repetition level, child reader for keys and child reader for values
-//   KeyValueReader(KeyValueReader<Box<Reader>, Box<Reader>>),
-// }
-
-// enum Value {
-//   Bool(bool),
-//   I32(i32),
-//   I64(i64),
-//   I96(Int96),
-//   F32(f32),
-//   F64(f64),
-//   ByteArray(Vec<u8>),
-//   FixedLenByteArray(Vec<u8>),
-// }
-
-// impl Reader {
-//   /// Reads current record as `Row` from the reader tree.
-//   /// Automatically advances all necessary readers.
-//   /// This must be called on the root level reader (i.e., for Message type).
-//   /// Otherwise, it will panic.
-//   // pub fn read(&mut self) -> Row {
-//     // match *self {
-//     //   Reader::GroupReader(_, _, ref mut readers) => {
-//     //     let mut fields = Vec::new();
-//     //     for reader in readers {
-//     //       fields.push((String::from(reader.field_name()), reader.read_field()));
-//     //     }
-//     //     make_row(fields)
-//     //   },
-//     //   _ => panic!("Cannot call read() on {}", self),
-//     // }
-//   // }
-
-//   // pub fn read_option(&mut self, f: impl FnMut(&mut Reader) -> Result<()>) ->
-// Result<()> {   //   if let Reader::OptionReader(ref mut option_reader) = *self {
-//   //     option_reader.read_option(f)
-//   //   } else {
-//   //     panic!()
-//   //   }
-//   // }
-
-//   // pub fn read_repeated(&mut self, f: impl FnMut(&mut Reader) -> Result<()>) ->
-// Result<()> {   //   if let Reader::RepeatedReader(ref mut repeated_reader) = *self {
-//   //     repeated_reader.read_repeated(f)
-//   //   } else {
-//   //     panic!()
-//   //   }
-//   // }
-
-//   // pub fn read_key_value(&mut self, f: impl FnMut(&mut Reader, &mut Reader) ->
-// Result<()>) -> Result<()> {   //   if let Reader::KeyValueReader(ref mut
-// key_value_reader) = *self {   //     key_value_reader.read_key_value(f)
-//   //   } else {
-//   //     panic!()
-//   //   }
-//   // }
-
-//   /// Reads current record as `Field` from the reader tree.
-//   /// Automatically advances all necessary readers.
-//   pub fn read_field(&mut self) -> Field {
-//     unimplemented!()
-//     // match *self {
-//     //   Reader::BoolReader(ref mut primitive_reader) =>
-// Value::Bool(primitive_reader.read_field()),     //   Reader::I32Reader(ref mut
-// primitive_reader) => Value::I32(primitive_reader.read_field()),     //   Reader::
-// I64Reader(ref mut primitive_reader) => Value::I64(primitive_reader.read_field()),     //
-// Reader::I96Reader(ref mut primitive_reader) =>
-// Value::I96(primitive_reader.read_field()),     //   Reader::F32Reader(ref mut
-// primitive_reader) => Value::F32(primitive_reader.read_field()),     //   Reader::
-// F64Reader(ref mut primitive_reader) => Value::F64(primitive_reader.read_field()),     //
-// Reader::ByteArrayReader(ref mut primitive_reader) =>
-// Value::ByteArray(primitive_reader.read_field()),     //   Reader::
-// FixedLenByteArrayReader(ref mut primitive_reader) =>
-// Value::FixedLenByteArray(primitive_reader.read_field()),     //   Reader::
-// OptionReader(ref mut option_reader) => Value::Option(option_reader.read_field()),     //
-// Reader::GroupReader(ref mut group_reader) => Value::Group(group_reader.read_field()),
-//     //   Reader::RepeatedReader(ref mut repeated_reader) =>
-// Value::Repeated(repeated_reader.read_field()),     //   Reader::KeyValueReader(ref mut
-// key_value_reader) => Value::KeyValue(key_value_reader.read_field()),     // }
-//   }
-
-//   /// Advances leaf columns for the current reader.
-//   pub fn advance_columns(&mut self) {
-//     unimplemented!()
-//     // match *self {
-//     //   Reader::BoolReader(ref mut primitive_reader) =>
-// primitive_reader.advance_columns(),     //   Reader::I32Reader(ref mut
-// primitive_reader) => primitive_reader.advance_columns(),     //   Reader::I64Reader(ref
-// mut primitive_reader) => primitive_reader.advance_columns(),     //   Reader::
-// I96Reader(ref mut primitive_reader) => primitive_reader.advance_columns(),     //   Reader:
-// :F32Reader(ref mut primitive_reader) => primitive_reader.advance_columns(),     //   Reader:
-// :F64Reader(ref mut primitive_reader) => primitive_reader.advance_columns(),     //   Reader:
-// :ByteArrayReader(ref mut primitive_reader) => primitive_reader.advance_columns(),     //
-// Reader::FixedLenByteArrayReader(ref mut primitive_reader) =>
-// primitive_reader.advance_columns(),     //   Reader::OptionReader(ref mut
-// option_reader) => option_reader.advance_columns(),     //   Reader::GroupReader(ref mut
-// group_reader) => group_reader.advance_columns(),     //   Reader::RepeatedReader(ref
-// mut repeated_reader) => repeated_reader.advance_columns(),     //   Reader::
-// KeyValueReader(ref mut key_value_reader) => key_value_reader.advance_columns(),
-//     // }
-//   }
-
-//   // /// Returns field name for the current reader.
-//   // fn field_name(&self) -> &str {
-//   //   unimplemented!()
-//   //   // match *self {
-//   //   //   Reader::BoolReader(ref primitive_reader) => primitive_reader.field_name(),
-//   //   //   Reader::I32Reader(ref primitive_reader) => primitive_reader.field_name(),
-//   //   //   Reader::I64Reader(ref primitive_reader) => primitive_reader.field_name(),
-//   //   //   Reader::I96Reader(ref primitive_reader) => primitive_reader.field_name(),
-//   //   //   Reader::F32Reader(ref primitive_reader) => primitive_reader.field_name(),
-//   //   //   Reader::F64Reader(ref primitive_reader) => primitive_reader.field_name(),
-//   //   //   Reader::ByteArrayReader(ref primitive_reader) =>
-// primitive_reader.field_name(),   //   //   Reader::FixedLenByteArrayReader(ref
-// primitive_reader) => primitive_reader.field_name(),   //   //
-// Reader::OptionReader(ref option_reader) => option_reader.field_name(),   //   //
-// Reader::GroupReader(ref group_reader) => group_reader.field_name(),   //   //
-// Reader::RepeatedReader(ref repeated_reader) => repeated_reader.field_name(),   //   //
-// Reader::KeyValueReader(ref key_value_reader) => key_value_reader.field_name(),   //   //
-// }   // }
-
-//   // /// Returns repetition for the current reader.
-//   // fn repetition(&self) -> Repetition {
-//   //   unimplemented!()
-//   //   // match *self {
-//   //   //   Reader::BoolReader(ref primitive_reader) => primitive_reader.repetition(),
-//   //   //   Reader::I32Reader(ref primitive_reader) => primitive_reader.repetition(),
-//   //   //   Reader::I64Reader(ref primitive_reader) => primitive_reader.repetition(),
-//   //   //   Reader::I96Reader(ref primitive_reader) => primitive_reader.repetition(),
-//   //   //   Reader::F32Reader(ref primitive_reader) => primitive_reader.repetition(),
-//   //   //   Reader::F64Reader(ref primitive_reader) => primitive_reader.repetition(),
-//   //   //   Reader::ByteArrayReader(ref primitive_reader) =>
-// primitive_reader.repetition(),   //   //   Reader::FixedLenByteArrayReader(ref
-// primitive_reader) => primitive_reader.repetition(),   //   //
-// Reader::OptionReader(ref option_reader) => option_reader.repetition(),   //   //
-// Reader::GroupReader(ref group_reader) => group_reader.repetition(),   //   //
-// Reader::RepeatedReader(ref repeated_reader) => repeated_reader.repetition(),   //   //
-// Reader::KeyValueReader(ref key_value_reader) => key_value_reader.repetition(),   //   //
-// }   // }
-
-//   /// Returns true, if current reader has more values, false otherwise.
-//   /// Method does not advance internal iterator.
-//   fn has_next(&self) -> bool {
-//     unimplemented!()
-//     // match *self {
-//     //   Reader::BoolReader(ref primitive_reader) => primitive_reader.has_next(),
-//     //   Reader::I32Reader(ref primitive_reader) => primitive_reader.has_next(),
-//     //   Reader::I64Reader(ref primitive_reader) => primitive_reader.has_next(),
-//     //   Reader::I96Reader(ref primitive_reader) => primitive_reader.has_next(),
-//     //   Reader::F32Reader(ref primitive_reader) => primitive_reader.has_next(),
-//     //   Reader::F64Reader(ref primitive_reader) => primitive_reader.has_next(),
-//     //   Reader::ByteArrayReader(ref primitive_reader) => primitive_reader.has_next(),
-//     //   Reader::FixedLenByteArrayReader(ref primitive_reader) =>
-// primitive_reader.has_next(),     //   Reader::OptionReader(ref option_reader) =>
-// option_reader.has_next(),     //   Reader::GroupReader(ref group_reader) =>
-// group_reader.has_next(),     //   Reader::RepeatedReader(ref repeated_reader) =>
-// repeated_reader.has_next(),     //   Reader::KeyValueReader(ref key_value_reader) =>
-// key_value_reader.has_next(),     // }
-//   }
-
-//   /// Returns current definition level,
-//   /// Method does not advance internal iterator.
-//   fn current_def_level(&self) -> i16 {
-//     unimplemented!()
-//     // match *self {
-//     //   Reader::BoolReader(ref primitive_reader) =>
-// primitive_reader.current_def_level(),     //   Reader::I32Reader(ref primitive_reader)
-// => primitive_reader.current_def_level(),     //   Reader::I64Reader(ref
-// primitive_reader) => primitive_reader.current_def_level(),     //   Reader::
-// I96Reader(ref primitive_reader) => primitive_reader.current_def_level(),     //   Reader:
-// :F32Reader(ref primitive_reader) => primitive_reader.current_def_level(),     //   Reader:
-// :F64Reader(ref primitive_reader) => primitive_reader.current_def_level(),     //   Reader:
-// :ByteArrayReader(ref primitive_reader) => primitive_reader.current_def_level(),     //
-// Reader::FixedLenByteArrayReader(ref primitive_reader) =>
-// primitive_reader.current_def_level(),     //   Reader::OptionReader(ref option_reader)
-// => option_reader.current_def_level(),     //   Reader::GroupReader(ref group_reader) =>
-// group_reader.current_def_level(),     //   Reader::RepeatedReader(ref repeated_reader)
-// => repeated_reader.current_def_level(),     //   Reader::KeyValueReader(ref
-// key_value_reader) => key_value_reader.current_def_level(),     // }
-//   }
-
-//   /// Returns current repetition level.
-//   /// Method does not advance internal iterator.
-//   fn current_rep_level(&self) -> i16 {
-//     unimplemented!()
-//     // match *self {
-//     //   Reader::BoolReader(ref primitive_reader) =>
-// primitive_reader.current_rep_level(),     //   Reader::I32Reader(ref primitive_reader)
-// => primitive_reader.current_rep_level(),     //   Reader::I64Reader(ref
-// primitive_reader) => primitive_reader.current_rep_level(),     //   Reader::
-// I96Reader(ref primitive_reader) => primitive_reader.current_rep_level(),     //   Reader:
-// :F32Reader(ref primitive_reader) => primitive_reader.current_rep_level(),     //   Reader:
-// :F64Reader(ref primitive_reader) => primitive_reader.current_rep_level(),     //   Reader:
-// :ByteArrayReader(ref primitive_reader) => primitive_reader.current_rep_level(),     //
-// Reader::FixedLenByteArrayReader(ref primitive_reader) =>
-// primitive_reader.current_rep_level(),     //   Reader::OptionReader(ref option_reader)
-// => option_reader.current_rep_level(),     //   Reader::GroupReader(ref group_reader) =>
-// group_reader.current_rep_level(),     //   Reader::RepeatedReader(ref repeated_reader)
-// => repeated_reader.current_rep_level(),     //   Reader::KeyValueReader(ref
-// key_value_reader) => key_value_reader.current_rep_level(),     // }
-//   }
-// }
-
-// impl fmt::Display for Reader {
-//   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-//     let s = match self {
-//       Reader::BoolReader(..) => "BoolReader",
-//       Reader::I32Reader(..) => "I32Reader",
-//       Reader::I64Reader(..) => "I64Reader",
-//       Reader::I96Reader(..) => "I96Reader",
-//       Reader::F32Reader(..) => "F32Reader",
-//       Reader::F64Reader(..) => "F64Reader",
-//       Reader::ByteArrayReader(..) => "ByteArrayReader",
-//       Reader::FixedLenByteArrayReader(..) => "FixedLenByteArrayReader",
-//       Reader::OptionReader(..) => "OptionReader",
-//       Reader::GroupReader(..) => "GroupReader",
-//       Reader::RepeatedReader(..) => "RepeatedReader",
-//       Reader::KeyValueReader(..) => "KeyValueReader",
-//     };
-//     write!(f, "{}", s)
-//   }
-// }
-
 use super::DebugType;
 use std::fmt::{self, Debug};
 
@@ -1469,11 +1107,6 @@ where
     })
   }
 
-  // /// Returns common tree builder, so the same settings are applied to both iterators
-  // /// from file reader and row group.
-  // #[inline]
-  // fn tree_builder() -> TreeBuilder { TreeBuilder::new() }
-
   /// Helper method to get schema descriptor for projected schema.
   /// If projection is None, then full schema is returned.
   #[inline]
@@ -1592,427 +1225,498 @@ mod tests {
   use super::*;
   use errors::{ParquetError, Result};
   use file::reader::{FileReader, SerializedFileReader};
-  // use record::api::{Field, Row};
   use record::types::Value;
   use schema::parser::parse_message_type;
   use util::test_common::get_test_file;
 
-  // // Convenient macros to assemble row, list, map, and group.
+  // Convenient macros to assemble row, list, map, and group.
 
-  // macro_rules! row {
-  //   ( $( $e:expr ), * ) => {
-  //     {
-  //       let mut result = Vec::new();
-  //       $(
-  //         result.push($e);
-  //       )*
-  //       make_row(result)
-  //     }
-  //   }
-  // }
+  macro_rules! row {
+    ( $( ($name:expr, $e:expr) ), * ) => {
+      {
+        group!($( ($name, $e) ), *)
+      }
+    }
+  }
 
-  // macro_rules! list {
-  //   ( $( $e:expr ), * ) => {
-  //     {
-  //       let mut result = Vec::new();
-  //       $(
-  //         result.push($e);
-  //       )*
-  //       Field::ListInternal(make_list(result))
-  //     }
-  //   }
-  // }
+  macro_rules! list {
+    ( $( $e:expr ), * ) => {
+      {
+        let mut result = Vec::new();
+        $(
+          result.push($e);
+        )*
+        List(result)
+      }
+    }
+  }
+  macro_rules! listv {
+    ( $( $e:expr ), * ) => {
+      Value::List(list!($($e),*))
+    }
+  }
 
-  // macro_rules! map {
-  //   ( $( $e:expr ), * ) => {
-  //     {
-  //       let mut result = Vec::new();
-  //       $(
-  //         result.push($e);
-  //       )*
-  //       Field::MapInternal(make_map(result))
-  //     }
-  //   }
-  // }
+  macro_rules! map {
+    ( $( ($k:expr, $v:expr) ), * ) => {
+      {
+        let mut result = HashMap::new();
+        $(
+          result.insert($k, $v);
+        )*
+        Map(result)
+      }
+    }
+  }
+  macro_rules! mapv {
+    ( $( ($k:expr, $v:expr) ), * ) => {
+      Value::Map(map!($(($k,$v)),*))
+    }
+  }
 
-  // macro_rules! group {
-  //   ( $( $e:expr ), * ) => {
-  //     {
-  //       Field::Group(row!($( $e ), *))
-  //     }
-  //   }
-  // }
+  macro_rules! group {
+    ( $( ($name:expr, $e:expr) ), * ) => {
+      {
+        let mut result = Vec::new();
+        let mut keys = std::collections::HashMap::new();
+        $(
+          keys.insert($name, result.len());
+          result.push($e);
+        )*
+        Group(result, std::rc::Rc::new(keys))
+      }
+    }
+  }
+  macro_rules! groupv {
+    ( $( ($name:expr, $e:expr) ), * ) => {
+      Value::Group(group!($(($name,$e)),*))
+    }
+  }
 
-  // #[test]
-  // fn test_file_reader_rows_nulls() {
-  //   let rows = test_file_reader_rows("nulls.snappy.parquet", None).unwrap();
-  //   let expected_rows = vec![
-  //     row![(
-  //       "b_struct".to_string(),
-  //       group![("b_c_int".to_string(), Field::Null)]
-  //     )],
-  //     row![(
-  //       "b_struct".to_string(),
-  //       group![("b_c_int".to_string(), Field::Null)]
-  //     )],
-  //     row![(
-  //       "b_struct".to_string(),
-  //       group![("b_c_int".to_string(), Field::Null)]
-  //     )],
-  //     row![(
-  //       "b_struct".to_string(),
-  //       group![("b_c_int".to_string(), Field::Null)]
-  //     )],
-  //     row![(
-  //       "b_struct".to_string(),
-  //       group![("b_c_int".to_string(), Field::Null)]
-  //     )],
-  //     row![(
-  //       "b_struct".to_string(),
-  //       group![("b_c_int".to_string(), Field::Null)]
-  //     )],
-  //     row![(
-  //       "b_struct".to_string(),
-  //       group![("b_c_int".to_string(), Field::Null)]
-  //     )],
-  //     row![(
-  //       "b_struct".to_string(),
-  //       group![("b_c_int".to_string(), Field::Null)]
-  //     )],
-  //   ];
-  //   assert_eq!(rows, expected_rows);
-  // }
+  macro_rules! somev {
+    ( $e:expr ) => {
+      Value::Option(Box::new(Some($e)))
+    };
+  }
+  macro_rules! nonev {
+    ( ) => {
+      Value::Option(Box::new(None))
+    };
+  }
 
-  // #[test]
-  // fn test_file_reader_rows_nonnullable() {
-  //   let rows = test_file_reader_rows("nonnullable.impala.parquet", None).unwrap();
-  //   let expected_rows = vec![row![
-  //     ("ID".to_string(), Field::Long(8)),
-  //     ("Int_Array".to_string(), list![Field::Int(-1)]),
-  //     (
-  //       "int_array_array".to_string(),
-  //       list![list![Field::Int(-1), Field::Int(-2)], list![]]
-  //     ),
-  //     (
-  //       "Int_Map".to_string(),
-  //       map![(Field::Str("k1".to_string()), Field::Int(-1))]
-  //     ),
-  //     (
-  //       "int_map_array".to_string(),
-  //       list![
-  //         map![],
-  //         map![(Field::Str("k1".to_string()), Field::Int(1))],
-  //         map![],
-  //         map![]
-  //       ]
-  //     ),
-  //     (
-  //       "nested_Struct".to_string(),
-  //       group![
-  //         ("a".to_string(), Field::Int(-1)),
-  //         ("B".to_string(), list![Field::Int(-1)]),
-  //         (
-  //           "c".to_string(),
-  //           group![(
-  //             "D".to_string(),
-  //             list![list![group![
-  //               ("e".to_string(), Field::Int(-1)),
-  //               ("f".to_string(), Field::Str("nonnullable".to_string()))
-  //             ]]]
-  //           )]
-  //         ),
-  //         ("G".to_string(), map![])
-  //       ]
-  //     )
-  //   ]];
-  //   assert_eq!(rows, expected_rows);
-  // }
+  #[test]
+  fn test_file_reader_rows_nulls() {
+    let rows = test_file_reader_rows("nulls.snappy.parquet", None).unwrap();
+    let expected_rows = vec![
+      row![(
+        "b_struct".to_string(),
+        somev![groupv![("b_c_int".to_string(), nonev![])]]
+      )],
+      row![(
+        "b_struct".to_string(),
+        somev![groupv![("b_c_int".to_string(), nonev![])]]
+      )],
+      row![(
+        "b_struct".to_string(),
+        somev![groupv![("b_c_int".to_string(), nonev![])]]
+      )],
+      row![(
+        "b_struct".to_string(),
+        somev![groupv![("b_c_int".to_string(), nonev![])]]
+      )],
+      row![(
+        "b_struct".to_string(),
+        somev![groupv![("b_c_int".to_string(), nonev![])]]
+      )],
+      row![(
+        "b_struct".to_string(),
+        somev![groupv![("b_c_int".to_string(), nonev![])]]
+      )],
+      row![(
+        "b_struct".to_string(),
+        somev![groupv![("b_c_int".to_string(), nonev![])]]
+      )],
+      row![(
+        "b_struct".to_string(),
+        somev![groupv![("b_c_int".to_string(), nonev![])]]
+      )],
+    ];
+    assert_eq!(rows, expected_rows);
+  }
 
-  // #[test]
-  // fn test_file_reader_rows_nullable() {
-  //   let rows = test_file_reader_rows("nullable.impala.parquet", None).unwrap();
-  //   let expected_rows = vec![
-  //     row![
-  //       ("id".to_string(), Field::Long(1)),
-  //       (
-  //         "int_array".to_string(),
-  //         list![Field::Int(1), Field::Int(2), Field::Int(3)]
-  //       ),
-  //       (
-  //         "int_array_Array".to_string(),
-  //         list![
-  //           list![Field::Int(1), Field::Int(2)],
-  //           list![Field::Int(3), Field::Int(4)]
-  //         ]
-  //       ),
-  //       (
-  //         "int_map".to_string(),
-  //         map![
-  //           (Field::Str("k1".to_string()), Field::Int(1)),
-  //           (Field::Str("k2".to_string()), Field::Int(100))
-  //         ]
-  //       ),
-  //       (
-  //         "int_Map_Array".to_string(),
-  //         list![map![(Field::Str("k1".to_string()), Field::Int(1))]]
-  //       ),
-  //       (
-  //         "nested_struct".to_string(),
-  //         group![
-  //           ("A".to_string(), Field::Int(1)),
-  //           ("b".to_string(), list![Field::Int(1)]),
-  //           (
-  //             "C".to_string(),
-  //             group![(
-  //               "d".to_string(),
-  //               list![
-  //                 list![
-  //                   group![
-  //                     ("E".to_string(), Field::Int(10)),
-  //                     ("F".to_string(), Field::Str("aaa".to_string()))
-  //                   ],
-  //                   group![
-  //                     ("E".to_string(), Field::Int(-10)),
-  //                     ("F".to_string(), Field::Str("bbb".to_string()))
-  //                   ]
-  //                 ],
-  //                 list![group![
-  //                   ("E".to_string(), Field::Int(11)),
-  //                   ("F".to_string(), Field::Str("c".to_string()))
-  //                 ]]
-  //               ]
-  //             )]
-  //           ),
-  //           (
-  //             "g".to_string(),
-  //             map![(
-  //               Field::Str("foo".to_string()),
-  //               group![(
-  //                 "H".to_string(),
-  //                 group![("i".to_string(), list![Field::Double(1.1)])]
-  //               )]
-  //             )]
-  //           )
-  //         ]
-  //       )
-  //     ],
-  //     row![
-  //       ("id".to_string(), Field::Long(2)),
-  //       (
-  //         "int_array".to_string(),
-  //         list![
-  //           Field::Null,
-  //           Field::Int(1),
-  //           Field::Int(2),
-  //           Field::Null,
-  //           Field::Int(3),
-  //           Field::Null
-  //         ]
-  //       ),
-  //       (
-  //         "int_array_Array".to_string(),
-  //         list![
-  //           list![Field::Null, Field::Int(1), Field::Int(2), Field::Null],
-  //           list![Field::Int(3), Field::Null, Field::Int(4)],
-  //           list![],
-  //           Field::Null
-  //         ]
-  //       ),
-  //       (
-  //         "int_map".to_string(),
-  //         map![
-  //           (Field::Str("k1".to_string()), Field::Int(2)),
-  //           (Field::Str("k2".to_string()), Field::Null)
-  //         ]
-  //       ),
-  //       (
-  //         "int_Map_Array".to_string(),
-  //         list![
-  //           map![
-  //             (Field::Str("k3".to_string()), Field::Null),
-  //             (Field::Str("k1".to_string()), Field::Int(1))
-  //           ],
-  //           Field::Null,
-  //           map![]
-  //         ]
-  //       ),
-  //       (
-  //         "nested_struct".to_string(),
-  //         group![
-  //           ("A".to_string(), Field::Null),
-  //           ("b".to_string(), list![Field::Null]),
-  //           (
-  //             "C".to_string(),
-  //             group![(
-  //               "d".to_string(),
-  //               list![
-  //                 list![
-  //                   group![
-  //                     ("E".to_string(), Field::Null),
-  //                     ("F".to_string(), Field::Null)
-  //                   ],
-  //                   group![
-  //                     ("E".to_string(), Field::Int(10)),
-  //                     ("F".to_string(), Field::Str("aaa".to_string()))
-  //                   ],
-  //                   group![
-  //                     ("E".to_string(), Field::Null),
-  //                     ("F".to_string(), Field::Null)
-  //                   ],
-  //                   group![
-  //                     ("E".to_string(), Field::Int(-10)),
-  //                     ("F".to_string(), Field::Str("bbb".to_string()))
-  //                   ],
-  //                   group![
-  //                     ("E".to_string(), Field::Null),
-  //                     ("F".to_string(), Field::Null)
-  //                   ]
-  //                 ],
-  //                 list![
-  //                   group![
-  //                     ("E".to_string(), Field::Int(11)),
-  //                     ("F".to_string(), Field::Str("c".to_string()))
-  //                   ],
-  //                   Field::Null
-  //                 ],
-  //                 list![],
-  //                 Field::Null
-  //               ]
-  //             )]
-  //           ),
-  //           (
-  //             "g".to_string(),
-  //             map![
-  //               (
-  //                 Field::Str("g1".to_string()),
-  //                 group![(
-  //                   "H".to_string(),
-  //                   group![("i".to_string(), list![Field::Double(2.2), Field::Null])]
-  //                 )]
-  //               ),
-  //               (
-  //                 Field::Str("g2".to_string()),
-  //                 group![("H".to_string(), group![("i".to_string(), list![])])]
-  //               ),
-  //               (Field::Str("g3".to_string()), Field::Null),
-  //               (
-  //                 Field::Str("g4".to_string()),
-  //                 group![("H".to_string(), group![("i".to_string(), Field::Null)])]
-  //               ),
-  //               (
-  //                 Field::Str("g5".to_string()),
-  //                 group![("H".to_string(), Field::Null)]
-  //               )
-  //             ]
-  //           )
-  //         ]
-  //       )
-  //     ],
-  //     row![
-  //       ("id".to_string(), Field::Long(3)),
-  //       ("int_array".to_string(), list![]),
-  //       ("int_array_Array".to_string(), list![Field::Null]),
-  //       ("int_map".to_string(), map![]),
-  //       ("int_Map_Array".to_string(), list![Field::Null, Field::Null]),
-  //       (
-  //         "nested_struct".to_string(),
-  //         group![
-  //           ("A".to_string(), Field::Null),
-  //           ("b".to_string(), Field::Null),
-  //           ("C".to_string(), group![("d".to_string(), list![])]),
-  //           ("g".to_string(), map![])
-  //         ]
-  //       )
-  //     ],
-  //     row![
-  //       ("id".to_string(), Field::Long(4)),
-  //       ("int_array".to_string(), Field::Null),
-  //       ("int_array_Array".to_string(), list![]),
-  //       ("int_map".to_string(), map![]),
-  //       ("int_Map_Array".to_string(), list![]),
-  //       (
-  //         "nested_struct".to_string(),
-  //         group![
-  //           ("A".to_string(), Field::Null),
-  //           ("b".to_string(), Field::Null),
-  //           ("C".to_string(), group![("d".to_string(), Field::Null)]),
-  //           ("g".to_string(), Field::Null)
-  //         ]
-  //       )
-  //     ],
-  //     row![
-  //       ("id".to_string(), Field::Long(5)),
-  //       ("int_array".to_string(), Field::Null),
-  //       ("int_array_Array".to_string(), Field::Null),
-  //       ("int_map".to_string(), map![]),
-  //       ("int_Map_Array".to_string(), Field::Null),
-  //       (
-  //         "nested_struct".to_string(),
-  //         group![
-  //           ("A".to_string(), Field::Null),
-  //           ("b".to_string(), Field::Null),
-  //           ("C".to_string(), Field::Null),
-  //           (
-  //             "g".to_string(),
-  //             map![(
-  //               Field::Str("foo".to_string()),
-  //               group![(
-  //                 "H".to_string(),
-  //                 group![(
-  //                   "i".to_string(),
-  //                   list![Field::Double(2.2), Field::Double(3.3)]
-  //                 )]
-  //               )]
-  //             )]
-  //           )
-  //         ]
-  //       )
-  //     ],
-  //     row![
-  //       ("id".to_string(), Field::Long(6)),
-  //       ("int_array".to_string(), Field::Null),
-  //       ("int_array_Array".to_string(), Field::Null),
-  //       ("int_map".to_string(), Field::Null),
-  //       ("int_Map_Array".to_string(), Field::Null),
-  //       ("nested_struct".to_string(), Field::Null)
-  //     ],
-  //     row![
-  //       ("id".to_string(), Field::Long(7)),
-  //       ("int_array".to_string(), Field::Null),
-  //       (
-  //         "int_array_Array".to_string(),
-  //         list![Field::Null, list![Field::Int(5), Field::Int(6)]]
-  //       ),
-  //       (
-  //         "int_map".to_string(),
-  //         map![
-  //           (Field::Str("k1".to_string()), Field::Null),
-  //           (Field::Str("k3".to_string()), Field::Null)
-  //         ]
-  //       ),
-  //       ("int_Map_Array".to_string(), Field::Null),
-  //       (
-  //         "nested_struct".to_string(),
-  //         group![
-  //           ("A".to_string(), Field::Int(7)),
-  //           (
-  //             "b".to_string(),
-  //             list![Field::Int(2), Field::Int(3), Field::Null]
-  //           ),
-  //           (
-  //             "C".to_string(),
-  //             group![(
-  //               "d".to_string(),
-  //               list![list![], list![Field::Null], Field::Null]
-  //             )]
-  //           ),
-  //           ("g".to_string(), Field::Null)
-  //         ]
-  //       )
-  //     ],
-  //   ];
-  //   assert_eq!(rows, expected_rows);
-  // }
+  #[test]
+  fn test_file_reader_rows_nonnullable() {
+    let rows = test_file_reader_rows("nonnullable.impala.parquet", None).unwrap();
+    let expected_rows = vec![row![
+      ("ID".to_string(), Value::I64(8)),
+      ("Int_Array".to_string(), listv![Value::I32(-1)]),
+      (
+        "int_array_array".to_string(),
+        listv![listv![Value::I32(-1), Value::I32(-2)], listv![]]
+      ),
+      (
+        "Int_Map".to_string(),
+        mapv![(Value::String("k1".to_string()), Value::I32(-1))]
+      ),
+      (
+        "int_map_array".to_string(),
+        listv![
+          mapv![],
+          mapv![(Value::String("k1".to_string()), Value::I32(1))],
+          mapv![],
+          mapv![]
+        ]
+      ),
+      (
+        "nested_Struct".to_string(),
+        groupv![
+          ("a".to_string(), Value::I32(-1)),
+          ("B".to_string(), listv![Value::I32(-1)]),
+          (
+            "c".to_string(),
+            groupv![(
+              "D".to_string(),
+              listv![listv![groupv![
+                ("e".to_string(), Value::I32(-1)),
+                ("f".to_string(), Value::String("nonnullable".to_string()))
+              ]]]
+            )]
+          ),
+          ("G".to_string(), mapv![])
+        ]
+      )
+    ]];
+    assert_eq!(rows, expected_rows);
+  }
+
+  #[test]
+  fn test_file_reader_rows_nullable() {
+    let rows = test_file_reader_rows("nullable.impala.parquet", None).unwrap();
+    let expected_rows = vec![
+      row![
+        ("id".to_string(), somev![Value::I64(1)]),
+        (
+          "int_array".to_string(),
+          somev![listv![
+            somev![Value::I32(1)],
+            somev![Value::I32(2)],
+            somev![Value::I32(3)]
+          ]]
+        ),
+        (
+          "int_array_Array".to_string(),
+          somev![listv![
+            somev![listv![somev![Value::I32(1)], somev![Value::I32(2)]]],
+            somev![listv![somev![Value::I32(3)], somev![Value::I32(4)]]]
+          ]]
+        ),
+        (
+          "int_map".to_string(),
+          somev![mapv![
+            (Value::String("k1".to_string()), somev![Value::I32(1)]),
+            (Value::String("k2".to_string()), somev![Value::I32(100)])
+          ]]
+        ),
+        (
+          "int_Map_Array".to_string(),
+          somev![listv![somev![mapv![(
+            Value::String("k1".to_string()),
+            somev![Value::I32(1)]
+          )]]]]
+        ),
+        (
+          "nested_struct".to_string(),
+          somev![groupv![
+            ("A".to_string(), somev![Value::I32(1)]),
+            ("b".to_string(), somev![listv![somev![Value::I32(1)]]]),
+            (
+              "C".to_string(),
+              somev![groupv![(
+                "d".to_string(),
+                somev![listv![
+                  somev![listv![
+                    somev![groupv![
+                      ("E".to_string(), somev![Value::I32(10)]),
+                      ("F".to_string(), somev![Value::String("aaa".to_string())])
+                    ]],
+                    somev![groupv![
+                      ("E".to_string(), somev![Value::I32(-10)]),
+                      ("F".to_string(), somev![Value::String("bbb".to_string())])
+                    ]]
+                  ]],
+                  somev![listv![somev![groupv![
+                    ("E".to_string(), somev![Value::I32(11)]),
+                    ("F".to_string(), somev![Value::String("c".to_string())])
+                  ]]]]
+                ]]
+              )]]
+            ),
+            (
+              "g".to_string(),
+              somev![mapv![(
+                Value::String("foo".to_string()),
+                somev![groupv![(
+                  "H".to_string(),
+                  somev![groupv![(
+                    "i".to_string(),
+                    somev![listv![somev![Value::F64(1.1)]]]
+                  )]]
+                )]]
+              )]]
+            )
+          ]]
+        )
+      ],
+      row![
+        ("id".to_string(), somev![Value::I64(2)]),
+        (
+          "int_array".to_string(),
+          somev![listv![
+            nonev![],
+            somev![Value::I32(1)],
+            somev![Value::I32(2)],
+            nonev![],
+            somev![Value::I32(3)],
+            nonev![]
+          ]]
+        ),
+        (
+          "int_array_Array".to_string(),
+          somev![listv![
+            somev![listv![
+              nonev![],
+              somev![Value::I32(1)],
+              somev![Value::I32(2)],
+              nonev![]
+            ]],
+            somev![listv![
+              somev![Value::I32(3)],
+              nonev![],
+              somev![Value::I32(4)]
+            ]],
+            somev![listv![]],
+            nonev![]
+          ]]
+        ),
+        (
+          "int_map".to_string(),
+          somev![mapv![
+            (Value::String("k1".to_string()), somev![Value::I32(2)]),
+            (Value::String("k2".to_string()), nonev![])
+          ]]
+        ),
+        (
+          "int_Map_Array".to_string(),
+          somev![listv![
+            somev![mapv![
+              (Value::String("k3".to_string()), nonev![]),
+              (Value::String("k1".to_string()), somev![Value::I32(1)])
+            ]],
+            nonev![],
+            somev![mapv![]]
+          ]]
+        ),
+        (
+          "nested_struct".to_string(),
+          somev![groupv![
+            ("A".to_string(), nonev![]),
+            ("b".to_string(), somev![listv![nonev![]]]),
+            (
+              "C".to_string(),
+              somev![groupv![(
+                "d".to_string(),
+                somev![listv![
+                  somev![listv![
+                    somev![groupv![
+                      ("E".to_string(), nonev![]),
+                      ("F".to_string(), nonev![])
+                    ]],
+                    somev![groupv![
+                      ("E".to_string(), somev![Value::I32(10)]),
+                      ("F".to_string(), somev![Value::String("aaa".to_string())])
+                    ]],
+                    somev![groupv![
+                      ("E".to_string(), nonev![]),
+                      ("F".to_string(), nonev![])
+                    ]],
+                    somev![groupv![
+                      ("E".to_string(), somev![Value::I32(-10)]),
+                      ("F".to_string(), somev![Value::String("bbb".to_string())])
+                    ]],
+                    somev![groupv![
+                      ("E".to_string(), nonev![]),
+                      ("F".to_string(), nonev![])
+                    ]]
+                  ]],
+                  somev![listv![
+                    somev![groupv![
+                      ("E".to_string(), somev![Value::I32(11)]),
+                      ("F".to_string(), somev![Value::String("c".to_string())])
+                    ]],
+                    nonev![]
+                  ]],
+                  somev![listv![]],
+                  nonev![]
+                ]]
+              )]]
+            ),
+            (
+              "g".to_string(),
+              somev![mapv![
+                (
+                  Value::String("g1".to_string()),
+                  somev![groupv![(
+                    "H".to_string(),
+                    somev![groupv![(
+                      "i".to_string(),
+                      somev![listv![somev![Value::F64(2.2)], nonev![]]]
+                    )]]
+                  )]]
+                ),
+                (
+                  Value::String("g2".to_string()),
+                  somev![groupv![(
+                    "H".to_string(),
+                    somev![groupv![("i".to_string(), somev![listv![]])]]
+                  )]]
+                ),
+                (Value::String("g3".to_string()), nonev![]),
+                (
+                  Value::String("g4".to_string()),
+                  somev![groupv![(
+                    "H".to_string(),
+                    somev![groupv![("i".to_string(), nonev![])]]
+                  )]]
+                ),
+                (
+                  Value::String("g5".to_string()),
+                  somev![groupv![("H".to_string(), nonev![])]]
+                )
+              ]]
+            )
+          ]]
+        )
+      ],
+      row![
+        ("id".to_string(), somev![Value::I64(3)]),
+        ("int_array".to_string(), somev![listv![]]),
+        ("int_array_Array".to_string(), somev![listv![nonev![]]]),
+        ("int_map".to_string(), somev![mapv![]]),
+        (
+          "int_Map_Array".to_string(),
+          somev![listv![nonev![], nonev![]]]
+        ),
+        (
+          "nested_struct".to_string(),
+          somev![groupv![
+            ("A".to_string(), nonev![]),
+            ("b".to_string(), nonev![]),
+            (
+              "C".to_string(),
+              somev![groupv![("d".to_string(), somev![listv![]])]]
+            ),
+            ("g".to_string(), somev![mapv![]])
+          ]]
+        )
+      ],
+      row![
+        ("id".to_string(), somev![Value::I64(4)]),
+        ("int_array".to_string(), nonev![]),
+        ("int_array_Array".to_string(), somev![listv![]]),
+        ("int_map".to_string(), somev![mapv![]]),
+        ("int_Map_Array".to_string(), somev![listv![]]),
+        (
+          "nested_struct".to_string(),
+          somev![groupv![
+            ("A".to_string(), nonev![]),
+            ("b".to_string(), nonev![]),
+            (
+              "C".to_string(),
+              somev![groupv![("d".to_string(), nonev![])]]
+            ),
+            ("g".to_string(), nonev![])
+          ]]
+        )
+      ],
+      row![
+        ("id".to_string(), somev![Value::I64(5)]),
+        ("int_array".to_string(), nonev![]),
+        ("int_array_Array".to_string(), nonev![]),
+        ("int_map".to_string(), somev![mapv![]]),
+        ("int_Map_Array".to_string(), nonev![]),
+        (
+          "nested_struct".to_string(),
+          somev![groupv![
+            ("A".to_string(), nonev![]),
+            ("b".to_string(), nonev![]),
+            ("C".to_string(), nonev![]),
+            (
+              "g".to_string(),
+              somev![mapv![(
+                Value::String("foo".to_string()),
+                somev![groupv![(
+                  "H".to_string(),
+                  somev![groupv![(
+                    "i".to_string(),
+                    somev![listv![somev![Value::F64(2.2)], somev![Value::F64(3.3)]]]
+                  )]]
+                )]]
+              )]]
+            )
+          ]]
+        )
+      ],
+      row![
+        ("id".to_string(), somev![Value::I64(6)]),
+        ("int_array".to_string(), nonev![]),
+        ("int_array_Array".to_string(), nonev![]),
+        ("int_map".to_string(), nonev![]),
+        ("int_Map_Array".to_string(), nonev![]),
+        ("nested_struct".to_string(), nonev![])
+      ],
+      row![
+        ("id".to_string(), somev![Value::I64(7)]),
+        ("int_array".to_string(), nonev![]),
+        (
+          "int_array_Array".to_string(),
+          somev![listv![
+            nonev![],
+            somev![listv![somev![Value::I32(5)], somev![Value::I32(6)]]]
+          ]]
+        ),
+        (
+          "int_map".to_string(),
+          somev![mapv![
+            (Value::String("k1".to_string()), nonev![]),
+            (Value::String("k3".to_string()), nonev![])
+          ]]
+        ),
+        ("int_Map_Array".to_string(), nonev![]),
+        (
+          "nested_struct".to_string(),
+          somev![groupv![
+            ("A".to_string(), somev![Value::I32(7)]),
+            (
+              "b".to_string(),
+              somev![listv![
+                somev![Value::I32(2)],
+                somev![Value::I32(3)],
+                nonev![]
+              ]]
+            ),
+            (
+              "C".to_string(),
+              somev![groupv![(
+                "d".to_string(),
+                somev![listv![somev![listv![]], somev![listv![nonev![]]], nonev![]]]
+              )]]
+            ),
+            ("g".to_string(), nonev![])
+          ]]
+        )
+      ],
+    ];
+    assert_eq!(rows, expected_rows);
+  }
 
   // #[test]
   // fn test_file_reader_rows_projection() {
@@ -2026,28 +1730,28 @@ mod tests {
   //   let rows = test_file_reader_rows("nested_maps.snappy.parquet",
   // Some(schema)).unwrap();   let expected_rows = vec![
   //     row![
-  //       ("c".to_string(), Field::Double(1.0)),
-  //       ("b".to_string(), Field::Int(1))
+  //       ("c".to_string(), Value::F64(1.0)),
+  //       ("b".to_string(), Value::I32(1))
   //     ],
   //     row![
-  //       ("c".to_string(), Field::Double(1.0)),
-  //       ("b".to_string(), Field::Int(1))
+  //       ("c".to_string(), Value::F64(1.0)),
+  //       ("b".to_string(), Value::I32(1))
   //     ],
   //     row![
-  //       ("c".to_string(), Field::Double(1.0)),
-  //       ("b".to_string(), Field::Int(1))
+  //       ("c".to_string(), Value::F64(1.0)),
+  //       ("b".to_string(), Value::I32(1))
   //     ],
   //     row![
-  //       ("c".to_string(), Field::Double(1.0)),
-  //       ("b".to_string(), Field::Int(1))
+  //       ("c".to_string(), Value::F64(1.0)),
+  //       ("b".to_string(), Value::I32(1))
   //     ],
   //     row![
-  //       ("c".to_string(), Field::Double(1.0)),
-  //       ("b".to_string(), Field::Int(1))
+  //       ("c".to_string(), Value::F64(1.0)),
+  //       ("b".to_string(), Value::I32(1))
   //     ],
   //     row![
-  //       ("c".to_string(), Field::Double(1.0)),
-  //       ("b".to_string(), Field::Int(1))
+  //       ("c".to_string(), Value::F64(1.0)),
+  //       ("b".to_string(), Value::I32(1))
   //     ],
   //   ];
   //   assert_eq!(rows, expected_rows);
@@ -2075,41 +1779,41 @@ mod tests {
   // Some(schema)).unwrap();   let expected_rows = vec![
   //     row![(
   //       "a".to_string(),
-  //       map![(
-  //         Field::Str("a".to_string()),
+  //       mapv![(
+  //         Value::String("a".to_string()),
   //         map![
-  //           (Field::Int(1), Field::Bool(true)),
-  //           (Field::Int(2), Field::Bool(false))
+  //           (Value::I32(1), Value::Bool(true)),
+  //           (Value::I32(2), Value::Bool(false))
   //         ]
   //       )]
   //     )],
   //     row![(
   //       "a".to_string(),
   //       map![(
-  //         Field::Str("b".to_string()),
-  //         map![(Field::Int(1), Field::Bool(true))]
+  //         Value::String("b".to_string()),
+  //         map![(Value::I32(1), Value::Bool(true))]
   //       )]
   //     )],
   //     row![(
   //       "a".to_string(),
-  //       map![(Field::Str("c".to_string()), Field::Null)]
+  //       map![(Value::String("c".to_string()), nonev![])]
   //     )],
-  //     row![("a".to_string(), map![(Field::Str("d".to_string()), map![])])],
+  //     row![("a".to_string(), map![(Value::String("d".to_string()), map![])])],
   //     row![(
   //       "a".to_string(),
   //       map![(
-  //         Field::Str("e".to_string()),
-  //         map![(Field::Int(1), Field::Bool(true))]
+  //         Value::String("e".to_string()),
+  //         map![(Value::I32(1), Value::Bool(true))]
   //       )]
   //     )],
   //     row![(
   //       "a".to_string(),
   //       map![(
-  //         Field::Str("f".to_string()),
+  //         Value::String("f".to_string()),
   //         map![
-  //           (Field::Int(3), Field::Bool(true)),
-  //           (Field::Int(4), Field::Bool(false)),
-  //           (Field::Int(5), Field::Bool(true))
+  //           (Value::I32(3), Value::Bool(true)),
+  //           (Value::I32(4), Value::Bool(false)),
+  //           (Value::I32(5), Value::Bool(true))
   //         ]
   //       )]
   //     )],
@@ -2144,31 +1848,31 @@ mod tests {
   //       "a".to_string(),
   //       list![
   //         list![
-  //           list![Field::Str("a".to_string()), Field::Str("b".to_string())],
-  //           list![Field::Str("c".to_string())]
+  //           list![Value::String("a".to_string()), Value::String("b".to_string())],
+  //           list![Value::String("c".to_string())]
   //         ],
-  //         list![Field::Null, list![Field::Str("d".to_string())]]
+  //         list![nonev![], list![Value::String("d".to_string())]]
   //       ]
   //     )],
   //     row![(
   //       "a".to_string(),
   //       list![
   //         list![
-  //           list![Field::Str("a".to_string()), Field::Str("b".to_string())],
-  //           list![Field::Str("c".to_string()), Field::Str("d".to_string())]
+  //           list![Value::String("a".to_string()), Value::String("b".to_string())],
+  //           list![Value::String("c".to_string()), Value::String("d".to_string())]
   //         ],
-  //         list![Field::Null, list![Field::Str("e".to_string())]]
+  //         list![nonev![], list![Value::String("e".to_string())]]
   //       ]
   //     )],
   //     row![(
   //       "a".to_string(),
   //       list![
   //         list![
-  //           list![Field::Str("a".to_string()), Field::Str("b".to_string())],
-  //           list![Field::Str("c".to_string()), Field::Str("d".to_string())],
-  //           list![Field::Str("e".to_string())]
+  //           list![Value::String("a".to_string()), Value::String("b".to_string())],
+  //           list![Value::String("c".to_string()), Value::String("d".to_string())],
+  //           list![Value::String("e".to_string())]
   //         ],
-  //         list![Field::Null, list![Field::Str("f".to_string())]]
+  //         list![nonev![], list![Value::String("f".to_string())]]
   //       ]
   //     )],
   //   ];
@@ -2230,89 +1934,106 @@ mod tests {
   //   test_file_reader_rows("nested_maps.snappy.parquet", Some(schema)).unwrap();
   // }
 
-  // #[test]
-  // fn test_tree_reader_handle_repeated_fields_with_no_annotation() {
-  //   // Array field `phoneNumbers` does not contain LIST annotation.
-  //   // We parse it as struct with `phone` repeated field as array.
-  //   let rows = test_file_reader_rows("repeated_no_annotation.parquet", None).unwrap();
-  //   let expected_rows = vec![
-  //     row![
-  //       ("id".to_string(), Field::Int(1)),
-  //       ("phoneNumbers".to_string(), Field::Null)
-  //     ],
-  //     row![
-  //       ("id".to_string(), Field::Int(2)),
-  //       ("phoneNumbers".to_string(), Field::Null)
-  //     ],
-  //     row![
-  //       ("id".to_string(), Field::Int(3)),
-  //       (
-  //         "phoneNumbers".to_string(),
-  //         group![("phone".to_string(), list![])]
-  //       )
-  //     ],
-  //     row![
-  //       ("id".to_string(), Field::Int(4)),
-  //       (
-  //         "phoneNumbers".to_string(),
-  //         group![(
-  //           "phone".to_string(),
-  //           list![group![
-  //             ("number".to_string(), Field::Long(5555555555)),
-  //             ("kind".to_string(), Field::Null)
-  //           ]]
-  //         )]
-  //       )
-  //     ],
-  //     row![
-  //       ("id".to_string(), Field::Int(5)),
-  //       (
-  //         "phoneNumbers".to_string(),
-  //         group![(
-  //           "phone".to_string(),
-  //           list![group![
-  //             ("number".to_string(), Field::Long(1111111111)),
-  //             ("kind".to_string(), Field::Str("home".to_string()))
-  //           ]]
-  //         )]
-  //       )
-  //     ],
-  //     row![
-  //       ("id".to_string(), Field::Int(6)),
-  //       (
-  //         "phoneNumbers".to_string(),
-  //         group![(
-  //           "phone".to_string(),
-  //           list![
-  //             group![
-  //               ("number".to_string(), Field::Long(1111111111)),
-  //               ("kind".to_string(), Field::Str("home".to_string()))
-  //             ],
-  //             group![
-  //               ("number".to_string(), Field::Long(2222222222)),
-  //               ("kind".to_string(), Field::Null)
-  //             ],
-  //             group![
-  //               ("number".to_string(), Field::Long(3333333333)),
-  //               ("kind".to_string(), Field::Str("mobile".to_string()))
-  //             ]
-  //           ]
-  //         )]
-  //       )
-  //     ],
-  //   ];
+  #[test]
+  fn test_tree_reader_handle_repeated_fields_with_no_annotation() {
+    // Array field `phoneNumbers` does not contain LIST annotation.
+    // We parse it as struct with `phone` repeated field as array.
+    let rows = test_file_reader_rows("repeated_no_annotation.parquet", None).unwrap();
+    let expected_rows = vec![
+      row![
+        ("id".to_string(), Value::I32(1)),
+        ("phoneNumbers".to_string(), nonev![])
+      ],
+      row![
+        ("id".to_string(), Value::I32(2)),
+        ("phoneNumbers".to_string(), nonev![])
+      ],
+      row![
+        ("id".to_string(), Value::I32(3)),
+        (
+          "phoneNumbers".to_string(),
+          somev![groupv![("phone".to_string(), listv![])]]
+        )
+      ],
+      row![
+        ("id".to_string(), Value::I32(4)),
+        (
+          "phoneNumbers".to_string(),
+          somev![groupv![(
+            "phone".to_string(),
+            listv![groupv![
+              ("number".to_string(), Value::I64(5555555555)),
+              ("kind".to_string(), nonev![])
+            ]]
+          )]]
+        )
+      ],
+      row![
+        ("id".to_string(), Value::I32(5)),
+        (
+          "phoneNumbers".to_string(),
+          somev![groupv![(
+            "phone".to_string(),
+            listv![groupv![
+              ("number".to_string(), Value::I64(1111111111)),
+              (
+                "kind".to_string(),
+                somev![Value::String("home".to_string())]
+              )
+            ]]
+          )]]
+        )
+      ],
+      row![
+        ("id".to_string(), Value::I32(6)),
+        (
+          "phoneNumbers".to_string(),
+          somev![groupv![(
+            "phone".to_string(),
+            listv![
+              groupv![
+                ("number".to_string(), Value::I64(1111111111)),
+                (
+                  "kind".to_string(),
+                  somev![Value::String("home".to_string())]
+                )
+              ],
+              groupv![
+                ("number".to_string(), Value::I64(2222222222)),
+                ("kind".to_string(), nonev![])
+              ],
+              groupv![
+                ("number".to_string(), Value::I64(3333333333)),
+                (
+                  "kind".to_string(),
+                  somev![Value::String("mobile".to_string())]
+                )
+              ]
+            ]
+          )]]
+        )
+      ],
+    ];
 
-  //   assert_eq!(rows, expected_rows);
-  // }
+    assert_eq!(rows, expected_rows);
+  }
 
-  fn test_file_reader_rows(file_name: &str, schema: Option<Type>) -> Result<Vec<Value>> {
+  fn test_file_reader_rows(
+    file_name: &str,
+    schema: Option<Type>,
+  ) -> Result<Vec<crate::record::types::Row>>
+  {
     let file = get_test_file(file_name);
     let file_reader: SerializedFileReader<_> = SerializedFileReader::new(file)?;
     let iter = file_reader.get_row_iter(schema)?;
     Ok(iter.collect())
   }
 
-  fn test_row_group_rows(file_name: &str, schema: Option<Type>) -> Result<Vec<Value>> {
+  fn test_row_group_rows(
+    file_name: &str,
+    schema: Option<Type>,
+  ) -> Result<Vec<crate::record::types::Row>>
+  {
     let file = get_test_file(file_name);
     let file_reader: SerializedFileReader<_> = SerializedFileReader::new(file)?;
     // Check the first row group only, because files will contain only single row group

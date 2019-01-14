@@ -56,7 +56,10 @@ extern crate parquet;
 
 use std::{env, fs::File, path::Path, process};
 
-use parquet::file::reader::{FileReader, SerializedFileReader};
+use parquet::{
+  file::reader::{FileReader, SerializedFileReader},
+  record::types::Value,
+};
 
 fn main() {
   let args: Vec<String> = env::args().collect();
@@ -78,14 +81,7 @@ fn main() {
   let parquet_reader = SerializedFileReader::new(file).unwrap();
 
   // Use full schema as projected schema
-  // let mut iter =
-  // parquet_reader.get_row_iter::<parquet::record::types::Value>(None).unwrap();
-  let mut iter =
-    parquet::record::reader::RowIter::<_, parquet::record::types::Value>::from_file(
-      None,
-      &parquet_reader,
-    )
-    .unwrap();
+  let mut iter = parquet_reader.get_row_iter::<Value>(None).unwrap();
 
   let mut start = 0;
   let end = num_records.unwrap_or(0);
