@@ -25,13 +25,14 @@ use parquet::{
   column::reader::{get_typed_column_reader, ColumnReader},
   data_type::*,
   file::reader::{FileReader, SerializedFileReader},
+  record::types::{Row, Timestamp},
   schema::types::ColumnPath,
 };
 
 use test::Bencher;
 
 #[bench]
-fn record_reader_10k_collect(bench: &mut Bencher) {
+fn record_reader_10k(bench: &mut Bencher) {
   let path = Path::new("data/10k-v2.parquet");
   let file = File::open(&path).unwrap();
   let len = file.metadata().unwrap().len();
@@ -39,13 +40,32 @@ fn record_reader_10k_collect(bench: &mut Bencher) {
 
   bench.bytes = len;
   bench.iter(|| {
-    let iter = parquet_reader.get_row_iter(None).unwrap();
-    let _ = iter.collect::<Vec<_>>();
+    parquet_reader
+      .get_row_iter::<Row>(None)
+      .unwrap()
+      .for_each(drop);
   })
 }
 
 #[bench]
-fn record_reader_stock_simulated_collect(bench: &mut Bencher) {
+fn record_reader_10k_typed(bench: &mut Bencher) {
+  let path = Path::new("data/10k-v2.parquet");
+  let file = File::open(&path).unwrap();
+  let len = file.metadata().unwrap().len();
+  let parquet_reader = SerializedFileReader::new(file).unwrap();
+
+  bench.bytes = len;
+  bench.iter(|| {
+    type RowTyped = (Vec<u8>, i32, i64, bool, f32, f64, [u8; 1024], Timestamp);
+    parquet_reader
+      .get_row_iter::<RowTyped>(None)
+      .unwrap()
+      .for_each(drop);
+  })
+}
+
+#[bench]
+fn record_reader_stock_simulated(bench: &mut Bencher) {
   let path = Path::new("data/stock_simulated.parquet");
   let file = File::open(&path).unwrap();
   let len = file.metadata().unwrap().len();
@@ -53,8 +73,50 @@ fn record_reader_stock_simulated_collect(bench: &mut Bencher) {
 
   bench.bytes = len;
   bench.iter(|| {
-    let iter = parquet_reader.get_row_iter(None).unwrap();
-    let _ = iter.collect::<Vec<_>>();
+    parquet_reader
+      .get_row_iter::<Row>(None)
+      .unwrap()
+      .for_each(drop);
+  })
+}
+
+#[bench]
+fn record_reader_stock_simulated_typed(bench: &mut Bencher) {
+  let path = Path::new("data/stock_simulated.parquet");
+  let file = File::open(&path).unwrap();
+  let len = file.metadata().unwrap().len();
+  let parquet_reader = SerializedFileReader::new(file).unwrap();
+
+  bench.bytes = len;
+  bench.iter(|| {
+    type RowTyped = (
+      Option<f64>,
+      Option<f64>,
+      Option<f64>,
+      Option<f64>,
+      Option<f64>,
+      Option<f64>,
+      Option<f64>,
+      Option<f64>,
+      Option<f64>,
+      Option<f64>,
+      Option<f64>,
+      Option<f64>,
+      Option<f64>,
+      Option<f64>,
+      Option<f64>,
+      Option<f64>,
+      Option<f64>,
+      Option<f64>,
+      Option<f64>,
+      Option<f64>,
+      Option<f64>,
+      Option<i64>,
+    );
+    parquet_reader
+      .get_row_iter::<RowTyped>(None)
+      .unwrap()
+      .for_each(drop);
   })
 }
 

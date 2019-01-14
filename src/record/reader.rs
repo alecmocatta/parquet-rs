@@ -1242,6 +1242,7 @@ mod tests {
   macro_rules! list {
     ( $( $e:expr ), * ) => {
       {
+        #[allow(unused_mut)]
         let mut result = Vec::new();
         $(
           result.push($e);
@@ -1259,6 +1260,7 @@ mod tests {
   macro_rules! map {
     ( $( ($k:expr, $v:expr) ), * ) => {
       {
+        #[allow(unused_mut)]
         let mut result = HashMap::new();
         $(
           result.insert($k, $v);
@@ -1276,7 +1278,9 @@ mod tests {
   macro_rules! group {
     ( $( ($name:expr, $e:expr) ), * ) => {
       {
+        #[allow(unused_mut)]
         let mut result = Vec::new();
+        #[allow(unused_mut)]
         let mut keys = std::collections::HashMap::new();
         $(
           keys.insert($name, result.len());
