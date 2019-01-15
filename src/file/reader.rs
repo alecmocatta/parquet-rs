@@ -534,6 +534,7 @@ mod tests {
   use super::*;
   use basic::SortOrder;
   use parquet_format::TypeDefinedOrder;
+  use record::types::Row;
   use util::test_common::{get_temp_file, get_test_file, get_test_path};
 
   #[test]
@@ -557,12 +558,8 @@ mod tests {
         .unwrap();
     let read_from_cursor = SerializedFileReader::new(cursor).unwrap();
 
-    let file_iter = read_from_file
-      .get_row_iter::<crate::record::types::Value>(None)
-      .unwrap();
-    let cursor_iter = read_from_cursor
-      .get_row_iter::<crate::record::types::Value>(None)
-      .unwrap();
+    let file_iter = read_from_file.get_row_iter::<Row>(None).unwrap();
+    let cursor_iter = read_from_cursor.get_row_iter::<Row>(None).unwrap();
 
     assert!(file_iter.eq(cursor_iter));
   }

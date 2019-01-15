@@ -527,7 +527,7 @@ mod tests {
     reader::{FileReader, SerializedFileReader, SerializedPageReader},
     statistics::{from_thrift, to_thrift, Statistics},
   };
-  // use record::RowAccessor;
+  use record::types::Row;
   use util::{memory::ByteBufferPtr, test_common::get_temp_file};
 
   #[test]
@@ -659,13 +659,7 @@ mod tests {
     writer.close().unwrap();
 
     let reader = SerializedFileReader::new(file).unwrap();
-    assert_eq!(
-      reader
-        .get_row_iter::<crate::record::types::Value>(None)
-        .unwrap()
-        .count(),
-      0
-    );
+    assert_eq!(reader.get_row_iter::<Row>(None).unwrap().count(), 0);
   }
 
   #[test]
@@ -940,24 +934,14 @@ mod tests {
     for i in 0..reader.num_row_groups() {
       let row_group_reader = reader.get_row_group(i).unwrap();
       // let iter =
-      // row_group_reader.get_row_iter::<crate::record::types::Value>(None).unwrap();
+      // row_group_reader.get_row_iter::<Row>(None).unwrap();
       let iter = crate::record::reader::RowIter::<
         SerializedFileReader<File>,
-        crate::record::types::Value,
+        Row,
       >::from_row_group(None, &*row_group_reader)
       .unwrap();
       let res = iter
-        .map(|elem| {
-          elem
-            .as_group()
-            .unwrap()
-            .0
-            .into_iter()
-            .next()
-            .unwrap()
-            .as_i32()
-            .unwrap()
-        })
+        .map(|elem| elem.0.into_iter().next().unwrap().as_i32().unwrap())
         .collect::<Vec<i32>>();
       assert_eq!(res, data[i]);
     }

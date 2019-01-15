@@ -29,17 +29,33 @@ use record::reader::Reader;
 use schema::types::{ColumnDescPtr, ColumnPath, Type};
 use std::{
   collections::HashMap,
-  fmt::{self, Debug},
+  fmt::{self, Display},
+  marker::PhantomData,
 };
 // pub use self::api::{List, ListAccessor, Map, MapAccessor, Row, RowAccessor};
 // pub use self::triplet::TypedTripletIter;
 
-pub trait DebugType {
+pub trait DisplayType {
   fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error>;
 }
 
+struct DisplayDisplayType<T>(PhantomData<fn(T)>)
+where T: DisplayType;
+impl<T> DisplayDisplayType<T>
+where T: DisplayType
+{
+  fn new() -> Self { Self(PhantomData) }
+}
+impl<T> Display for DisplayDisplayType<T>
+where T: DisplayType
+{
+  fn fmt(&self, f: &mut fmt::Formatter) -> std::result::Result<(), fmt::Error> {
+    T::fmt(f)
+  }
+}
+
 pub trait Deserialize: Sized {
-  type Schema: Debug + DebugType;
+  type Schema: Display + DisplayType;
   type Reader: Reader<Item = Self>;
 
   fn parse(schema: &Type) -> Result<(String, Self::Schema), ParquetError>;

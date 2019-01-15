@@ -7,12 +7,12 @@ use super::{
   },
   schemas::{
     ArraySchema, BoolSchema, F32Schema, F64Schema, GroupSchema, I16Schema, I32Schema,
-    I64Schema, I8Schema, ListSchema, MapSchema, OptionSchema, RootSchema, StringSchema,
-    TimestampSchema, TupleSchema, U16Schema, U32Schema, U64Schema, U8Schema, ValueSchema,
-    VecSchema,
+    I64Schema, I8Schema, ListSchema, ListSchemaType, MapSchema, OptionSchema, RootSchema,
+    StringSchema, TimestampSchema, TupleSchema, U16Schema, U32Schema, U64Schema,
+    U8Schema, ValueSchema, VecSchema,
   },
   triplet::TypedTripletIter,
-  DebugType, Deserialize,
+  Deserialize, DisplayType,
 };
 use crate::{
   basic::{LogicalType, Repetition, Type as PhysicalType},
@@ -31,7 +31,7 @@ use std::{
   collections::HashMap,
   convert::TryInto,
   error::Error,
-  fmt::{self, Debug},
+  fmt::{self, Debug, Display},
   hash::{Hash, Hasher},
   marker::PhantomData,
   num::TryFromIntError,
@@ -45,51 +45,6 @@ const DEFAULT_BATCH_SIZE: usize = 1024;
 
 #[derive(Clone, Hash, PartialEq, Eq, Debug)]
 pub struct Root<T>(pub T);
-#[derive(Clone, Hash, PartialEq, Eq, Debug)]
-pub struct Date(pub(super) i32);
-#[derive(Clone, Hash, PartialEq, Eq, Debug)]
-pub struct Time(pub(super) i64);
-
-const JULIAN_DAY_OF_EPOCH: i64 = 2_440_588;
-const SECONDS_PER_DAY: i64 = 86_400;
-const MILLIS_PER_SECOND: i64 = 1_000;
-const MICROS_PER_MILLI: i64 = 1_000;
-
-#[derive(Clone, Hash, PartialEq, Eq, Debug)]
-pub struct Timestamp(pub(super) Int96);
-impl Timestamp {
-  fn as_day_nanos(&self) -> (i64, i64) {
-    let day = self.0.data()[2] as i64;
-    let nanoseconds = ((self.0.data()[1] as i64) << 32) + self.0.data()[0] as i64;
-    (day, nanoseconds)
-  }
-
-  fn as_millis(&self) -> Option<i64> {
-    let day = self.0.data()[2] as i64;
-    let nanoseconds = ((self.0.data()[1] as i64) << 32) + self.0.data()[0] as i64;
-    let seconds = (day - JULIAN_DAY_OF_EPOCH) * SECONDS_PER_DAY;
-    Some(seconds * MILLIS_PER_SECOND + nanoseconds / 1_000_000)
-  }
-
-  fn as_micros(&self) -> Option<i64> {
-    let day = self.0.data()[2] as i64;
-    let nanoseconds = ((self.0.data()[1] as i64) << 32) + self.0.data()[0] as i64;
-    let seconds = (day - JULIAN_DAY_OF_EPOCH) * SECONDS_PER_DAY;
-    Some(seconds * MILLIS_PER_SECOND * MICROS_PER_MILLI + nanoseconds / 1_000)
-  }
-
-  fn as_nanos(&self) -> Option<i64> {
-    let day = self.0.data()[2] as i64;
-    let nanoseconds = ((self.0.data()[1] as i64) << 32) + self.0.data()[0] as i64;
-    let seconds = (day - JULIAN_DAY_OF_EPOCH) * SECONDS_PER_DAY;
-    Some(seconds * MILLIS_PER_SECOND * MICROS_PER_MILLI * 1_000 + nanoseconds)
-  }
-}
-
-#[derive(Clone, Hash, PartialEq, Eq, Debug)]
-pub struct List<T>(pub(super) Vec<T>);
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub struct Map<K: Hash + Eq, V>(pub(super) HashMap<K, V>);
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Value {
@@ -652,6 +607,7 @@ impl Deserialize for Value {
         },
       );
     }
+    // https://github.com/apache/parquet-format/blob/master/LogicalTypes.md#backward-compatibility-rules
     if value.is_none()
       && schema.is_group()
       && !schema.is_schema()
@@ -659,30 +615,37 @@ impl Deserialize for Value {
       && schema.get_fields().len() == 1
     {
       let sub_schema = schema.get_fields().into_iter().nth(0).unwrap();
-      if sub_schema.is_group()
-        && !sub_schema.is_schema()
-        && sub_schema.get_basic_info().repetition() == Repetition::REPEATED
-        && sub_schema.get_fields().len() == 1
-      {
-        let element = sub_schema.get_fields().into_iter().nth(0).unwrap();
-        let list_name = if sub_schema.name() == "list" {
-          None
+      if sub_schema.get_basic_info().repetition() == Repetition::REPEATED {
+        if sub_schema.is_group()
+          && sub_schema.get_fields().len() == 1
+          && sub_schema.name() != "array"
+          && sub_schema.name() != format!("{}_tuple", schema.name())
+        {
+          let element = sub_schema.get_fields().into_iter().nth(0).unwrap();
+          let list_name = if sub_schema.name() == "list" {
+            None
+          } else {
+            Some(sub_schema.name().to_owned())
+          };
+          let element_name = if element.name() == "element" {
+            None
+          } else {
+            Some(element.name().to_owned())
+          };
+          value = Some(ValueSchema::List(Box::new(ListSchema(
+            Value::parse(&*element)?.1,
+            ListSchemaType::List(list_name, element_name),
+          ))));
         } else {
-          Some(sub_schema.name().to_owned())
-        };
-        let element_name = if element.name() == "element" {
-          None
-        } else {
-          Some(element.name().to_owned())
-        };
-        value = Some(ValueSchema::List(Box::new(ListSchema(
-          Value::parse(&*element)?.1,
-          Some((list_name, element_name)),
-        ))));
+          let element_name = sub_schema.name().to_owned();
+          value = Some(ValueSchema::List(Box::new(ListSchema(
+            Value::parse(&*sub_schema)?.1,
+            ListSchemaType::ListCompat(element_name),
+          ))));
+        }
       }
       // Err(ParquetError::General(String::from("List<T>")))
     }
-    // TODO https://github.com/apache/parquet-format/blob/master/LogicalTypes.md#backward-compatibility-rules
     if value.is_none()
       && schema.is_group()
       && !schema.is_schema()
@@ -753,7 +716,7 @@ impl Deserialize for Value {
         value = ValueSchema::Option(Box::new(OptionSchema(value)));
       },
       Repetition::REPEATED => {
-        value = ValueSchema::List(Box::new(ListSchema(value, None)));
+        value = ValueSchema::List(Box::new(ListSchema(value, ListSchemaType::Repeated)));
       },
       Repetition::REQUIRED => (),
     }
@@ -926,26 +889,36 @@ impl Deserialize for Root<Value> {
       && schema.get_fields().len() == 1
     {
       let sub_schema = schema.get_fields().into_iter().nth(0).unwrap();
-      if sub_schema.is_group()
-        && !sub_schema.is_schema()
-        && sub_schema.get_basic_info().repetition() == Repetition::REPEATED
-        && sub_schema.get_fields().len() == 1
-      {
-        let element = sub_schema.get_fields().into_iter().nth(0).unwrap();
-        let list_name = if sub_schema.name() == "list" {
-          None
-        } else {
-          Some(sub_schema.name().to_owned())
-        };
-        let element_name = if element.name() == "element" {
-          None
-        } else {
-          Some(element.name().to_owned())
-        };
-        value = Some(ValueSchema::List(Box::new(ListSchema(
-          Value::parse(&*element)?.1,
-          Some((list_name, element_name)),
-        ))));
+      if sub_schema.get_basic_info().repetition() == Repetition::REPEATED {
+        value = Some(ValueSchema::List(Box::new(
+          if sub_schema.is_group()
+            && sub_schema.get_fields().len() == 1
+            && sub_schema.name() != "array"
+            && sub_schema.name() != format!("{}_tuple", schema.name())
+          {
+            let element = sub_schema.get_fields().into_iter().nth(0).unwrap();
+            let list_name = if sub_schema.name() == "list" {
+              None
+            } else {
+              Some(sub_schema.name().to_owned())
+            };
+            let element_name = if element.name() == "element" {
+              None
+            } else {
+              Some(element.name().to_owned())
+            };
+            ListSchema(
+              Value::parse(&*element)?.1,
+              ListSchemaType::List(list_name, element_name),
+            )
+          } else {
+            let element_name = sub_schema.name().to_owned();
+            ListSchema(
+              Value::parse(&*sub_schema)?.1,
+              ListSchemaType::ListCompat(element_name),
+            )
+          },
+        )));
       }
       // Err(ParquetError::General(String::from("List<T>")))
     }
@@ -1102,7 +1075,6 @@ impl Deserialize for Group {
     }
   }
 }
-
 impl Deserialize for Root<Group> {
   type Reader = RootReader<GroupReader>;
   type Schema = RootSchema<Group, GroupSchema>;
@@ -1150,6 +1122,157 @@ impl Deserialize for Root<Group> {
     ))
   }
 }
+
+#[derive(Clone, Hash, PartialEq, Eq, Debug)]
+pub struct List<T>(pub(super) Vec<T>);
+
+impl<T> Deserialize for List<T>
+where T: Deserialize
+{
+  // existential type Reader: Reader<Item = Self>;
+  type Reader =
+    MapReader<RepeatedReader<T::Reader>, fn(Vec<T>) -> Result<Self, ParquetError>>;
+  type Schema = ListSchema<T::Schema>;
+
+  fn parse(schema: &Type) -> Result<(String, Self::Schema), ParquetError> {
+    // <Value as Deserialize>::parse(schema).and_then(|(name, schema)| {
+    //  match schema {
+    //    ValueSchema::List(box ListSchema(schema, a)) => Ok((name, ListSchema(schema,
+    // a))),    _ => Err(ParquetError::General(String::from(""))),
+    //  }
+    // })
+    if schema.is_group()
+      && !schema.is_schema()
+      && schema.get_basic_info().repetition() == Repetition::REQUIRED
+      && schema.get_basic_info().logical_type() == LogicalType::LIST
+      && schema.get_fields().len() == 1
+    {
+      let sub_schema = schema.get_fields().into_iter().nth(0).unwrap();
+      if sub_schema.get_basic_info().repetition() == Repetition::REPEATED {
+        return Ok((
+          schema.name().to_owned(),
+          if sub_schema.is_group()
+            && sub_schema.get_fields().len() == 1
+            && sub_schema.name() != "array"
+            && sub_schema.name() != format!("{}_tuple", schema.name())
+          {
+            let element = sub_schema.get_fields().into_iter().nth(0).unwrap();
+            let list_name = if sub_schema.name() == "list" {
+              None
+            } else {
+              Some(sub_schema.name().to_owned())
+            };
+            let element_name = if element.name() == "element" {
+              None
+            } else {
+              Some(element.name().to_owned())
+            };
+
+            ListSchema(
+              T::parse(&*element)?.1,
+              ListSchemaType::List(list_name, element_name),
+            )
+          } else {
+            let element_name = sub_schema.name().to_owned();
+            ListSchema(
+              T::parse(&*sub_schema)?.1,
+              ListSchemaType::ListCompat(element_name),
+            )
+          },
+        ));
+      }
+    }
+    if schema.get_basic_info().repetition() == Repetition::REPEATED {
+      let mut schema2: Type = schema.clone();
+      let basic_info = match schema2 {
+        Type::PrimitiveType {
+          ref mut basic_info, ..
+        } => basic_info,
+        Type::GroupType {
+          ref mut basic_info, ..
+        } => basic_info,
+      };
+      basic_info.set_repetition(Some(Repetition::REQUIRED));
+      return Ok((
+        schema.name().to_owned(),
+        ListSchema(T::parse(&schema2)?.1, ListSchemaType::Repeated),
+      ));
+    }
+    // https://github.com/apache/parquet-format/blob/master/LogicalTypes.md#backward-compatibility-rules
+    Err(ParquetError::General(String::from("List<T>")))
+  }
+
+  fn reader(
+    schema: &Self::Schema,
+    path: &mut Vec<String>,
+    curr_def_level: i16,
+    curr_rep_level: i16,
+    paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
+  ) -> Self::Reader
+  {
+    MapReader(
+      match schema.1 {
+        ListSchemaType::List(ref list_name, ref element_name) => {
+          let list_name = list_name.as_ref().map(|x| &**x).unwrap_or("list");
+          let element_name = element_name.as_ref().map(|x| &**x).unwrap_or("element");
+
+          path.push(list_name.to_owned());
+          path.push(element_name.to_owned());
+          let reader = T::reader(
+            &schema.0,
+            path,
+            curr_def_level + 1,
+            curr_rep_level + 1,
+            paths,
+          );
+          path.pop().unwrap();
+          path.pop().unwrap();
+
+          RepeatedReader {
+            def_level: curr_def_level,
+            rep_level: curr_rep_level,
+            reader,
+          }
+        },
+        ListSchemaType::ListCompat(ref element_name) => {
+          path.push(element_name.to_owned());
+          let reader = T::reader(
+            &schema.0,
+            path,
+            curr_def_level + 1,
+            curr_rep_level + 1,
+            paths,
+          );
+          path.pop().unwrap();
+
+          RepeatedReader {
+            def_level: curr_def_level,
+            rep_level: curr_rep_level,
+            reader,
+          }
+        },
+        ListSchemaType::Repeated => {
+          let reader = T::reader(
+            &schema.0,
+            path,
+            curr_def_level + 1,
+            curr_rep_level + 1,
+            paths,
+          );
+          RepeatedReader {
+            def_level: curr_def_level,
+            rep_level: curr_rep_level,
+            reader,
+          }
+        },
+      },
+      (|x| Ok(List(x))) as fn(_) -> _,
+    )
+  }
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct Map<K: Hash + Eq, V>(pub(super) HashMap<K, V>);
 
 impl<K, V> Deserialize for Map<K, V>
 where
@@ -1254,119 +1377,6 @@ where
   }
 }
 
-impl<T> Deserialize for List<T>
-where T: Deserialize
-{
-  // existential type Reader: Reader<Item = Self>;
-  type Reader =
-    MapReader<RepeatedReader<T::Reader>, fn(Vec<T>) -> Result<Self, ParquetError>>;
-  type Schema = ListSchema<T::Schema>;
-
-  fn parse(schema: &Type) -> Result<(String, Self::Schema), ParquetError> {
-    // <Value as Deserialize>::parse(schema).and_then(|(name, schema)| {
-    //  match schema {
-    //    ValueSchema::List(box ListSchema(schema, a)) => Ok((name, ListSchema(schema,
-    // a))),    _ => Err(ParquetError::General(String::from(""))),
-    //  }
-    // })
-    if schema.is_group()
-      && !schema.is_schema()
-      && schema.get_basic_info().repetition() == Repetition::REQUIRED
-      && schema.get_basic_info().logical_type() == LogicalType::LIST
-      && schema.get_fields().len() == 1
-    {
-      let sub_schema = schema.get_fields().into_iter().nth(0).unwrap();
-      if sub_schema.is_group()
-        && !sub_schema.is_schema()
-        && sub_schema.get_basic_info().repetition() == Repetition::REPEATED
-        && sub_schema.get_fields().len() == 1
-      {
-        let element = sub_schema.get_fields().into_iter().nth(0).unwrap();
-        let list_name = if sub_schema.name() == "list" {
-          None
-        } else {
-          Some(sub_schema.name().to_owned())
-        };
-        let element_name = if element.name() == "element" {
-          None
-        } else {
-          Some(element.name().to_owned())
-        };
-        return Ok((
-          schema.name().to_owned(),
-          ListSchema(T::parse(&*element)?.1, Some((list_name, element_name))),
-        ));
-      }
-    }
-    if schema.get_basic_info().repetition() == Repetition::REPEATED {
-      let mut schema2: Type = schema.clone();
-      let basic_info = match schema2 {
-        Type::PrimitiveType {
-          ref mut basic_info, ..
-        } => basic_info,
-        Type::GroupType {
-          ref mut basic_info, ..
-        } => basic_info,
-      };
-      basic_info.set_repetition(Some(Repetition::REQUIRED));
-      return Ok((
-        schema.name().to_owned(),
-        ListSchema(T::parse(&schema2)?.1, None),
-      ));
-    }
-    // https://github.com/apache/parquet-format/blob/master/LogicalTypes.md#backward-compatibility-rules
-    Err(ParquetError::General(String::from("List<T>")))
-  }
-
-  fn reader(
-    schema: &Self::Schema,
-    path: &mut Vec<String>,
-    curr_def_level: i16,
-    curr_rep_level: i16,
-    paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
-  ) -> Self::Reader
-  {
-    MapReader(
-      if let Some((ref list_name, ref element_name)) = schema.1 {
-        let list_name = list_name.as_ref().map(|x| &**x).unwrap_or("list");
-        let element_name = element_name.as_ref().map(|x| &**x).unwrap_or("element");
-
-        path.push(list_name.to_owned());
-        path.push(element_name.to_owned());
-        let reader = T::reader(
-          &schema.0,
-          path,
-          curr_def_level + 1,
-          curr_rep_level + 1,
-          paths,
-        );
-        path.pop().unwrap();
-        path.pop().unwrap();
-
-        RepeatedReader {
-          def_level: curr_def_level,
-          rep_level: curr_rep_level,
-          reader,
-        }
-      } else {
-        let reader = T::reader(
-          &schema.0,
-          path,
-          curr_def_level + 1,
-          curr_rep_level + 1,
-          paths,
-        );
-        RepeatedReader {
-          def_level: curr_def_level,
-          rep_level: curr_rep_level,
-          reader,
-        }
-      },
-      (|x| Ok(List(x))) as fn(_) -> _,
-    )
-  }
-}
-
 impl<T> Deserialize for Option<T>
 where
   T: Deserialize,
@@ -1441,70 +1451,7 @@ impl Deserialize for bool {
     }
   }
 }
-impl Deserialize for f32 {
-  type Reader = F32Reader;
-  type Schema = F32Schema;
 
-  fn parse(schema: &Type) -> Result<(String, Self::Schema), ParquetError> {
-    Value::parse(schema).and_then(downcast)
-  }
-
-  fn reader(
-    _schema: &Self::Schema,
-    path: &mut Vec<String>,
-    curr_def_level: i16,
-    curr_rep_level: i16,
-    paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
-  ) -> Self::Reader
-  {
-    let col_path = ColumnPath::new(path.to_vec());
-    let (col_descr, col_reader) = paths.remove(&col_path).unwrap();
-    assert_eq!(
-      (curr_def_level, curr_rep_level),
-      (col_descr.max_def_level(), col_descr.max_rep_level())
-    );
-    F32Reader {
-      column: TypedTripletIter::<FloatType>::new(
-        curr_def_level,
-        curr_rep_level,
-        DEFAULT_BATCH_SIZE,
-        col_reader,
-      ),
-    }
-  }
-}
-impl Deserialize for f64 {
-  type Reader = F64Reader;
-  type Schema = F64Schema;
-
-  fn parse(schema: &Type) -> Result<(String, Self::Schema), ParquetError> {
-    Value::parse(schema).and_then(downcast)
-  }
-
-  fn reader(
-    _schema: &Self::Schema,
-    path: &mut Vec<String>,
-    curr_def_level: i16,
-    curr_rep_level: i16,
-    paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
-  ) -> Self::Reader
-  {
-    let col_path = ColumnPath::new(path.to_vec());
-    let (col_descr, col_reader) = paths.remove(&col_path).unwrap();
-    assert_eq!(
-      (curr_def_level, curr_rep_level),
-      (col_descr.max_def_level(), col_descr.max_rep_level())
-    );
-    F64Reader {
-      column: TypedTripletIter::<DoubleType>::new(
-        curr_def_level,
-        curr_rep_level,
-        DEFAULT_BATCH_SIZE,
-        col_reader,
-      ),
-    }
-  }
-}
 impl Deserialize for i8 {
   type Reader = TryIntoReader<I32Reader, i8>;
   type Schema = I8Schema;
@@ -1575,6 +1522,7 @@ impl Deserialize for u8 {
     )
   }
 }
+
 impl Deserialize for i16 {
   type Reader = TryIntoReader<I32Reader, i16>;
   type Schema = I16Schema;
@@ -1645,6 +1593,7 @@ impl Deserialize for u16 {
     )
   }
 }
+
 impl Deserialize for i32 {
   type Reader = I32Reader;
   type Schema = I32Schema;
@@ -1713,6 +1662,7 @@ impl Deserialize for u32 {
     )
   }
 }
+
 impl Deserialize for i64 {
   type Reader = I64Reader;
   type Schema = I64Schema;
@@ -1781,6 +1731,109 @@ impl Deserialize for u64 {
     )
   }
 }
+
+impl Deserialize for f32 {
+  type Reader = F32Reader;
+  type Schema = F32Schema;
+
+  fn parse(schema: &Type) -> Result<(String, Self::Schema), ParquetError> {
+    Value::parse(schema).and_then(downcast)
+  }
+
+  fn reader(
+    _schema: &Self::Schema,
+    path: &mut Vec<String>,
+    curr_def_level: i16,
+    curr_rep_level: i16,
+    paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
+  ) -> Self::Reader
+  {
+    let col_path = ColumnPath::new(path.to_vec());
+    let (col_descr, col_reader) = paths.remove(&col_path).unwrap();
+    assert_eq!(
+      (curr_def_level, curr_rep_level),
+      (col_descr.max_def_level(), col_descr.max_rep_level())
+    );
+    F32Reader {
+      column: TypedTripletIter::<FloatType>::new(
+        curr_def_level,
+        curr_rep_level,
+        DEFAULT_BATCH_SIZE,
+        col_reader,
+      ),
+    }
+  }
+}
+impl Deserialize for f64 {
+  type Reader = F64Reader;
+  type Schema = F64Schema;
+
+  fn parse(schema: &Type) -> Result<(String, Self::Schema), ParquetError> {
+    Value::parse(schema).and_then(downcast)
+  }
+
+  fn reader(
+    _schema: &Self::Schema,
+    path: &mut Vec<String>,
+    curr_def_level: i16,
+    curr_rep_level: i16,
+    paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
+  ) -> Self::Reader
+  {
+    let col_path = ColumnPath::new(path.to_vec());
+    let (col_descr, col_reader) = paths.remove(&col_path).unwrap();
+    assert_eq!(
+      (curr_def_level, curr_rep_level),
+      (col_descr.max_def_level(), col_descr.max_rep_level())
+    );
+    F64Reader {
+      column: TypedTripletIter::<DoubleType>::new(
+        curr_def_level,
+        curr_rep_level,
+        DEFAULT_BATCH_SIZE,
+        col_reader,
+      ),
+    }
+  }
+}
+
+const JULIAN_DAY_OF_EPOCH: i64 = 2_440_588;
+const SECONDS_PER_DAY: i64 = 86_400;
+const MILLIS_PER_SECOND: i64 = 1_000;
+const MICROS_PER_MILLI: i64 = 1_000;
+const NANOS_PER_MICRO: i64 = 1_000;
+
+#[derive(Clone, Hash, PartialEq, Eq, Debug)]
+pub struct Timestamp(pub(super) Int96);
+impl Timestamp {
+  fn as_day_nanos(&self) -> (i64, i64) {
+    let day = self.0.data()[2] as i64;
+    let nanoseconds = ((self.0.data()[1] as i64) << 32) + self.0.data()[0] as i64;
+    (day, nanoseconds)
+  }
+
+  fn as_millis(&self) -> Option<i64> {
+    let day = self.0.data()[2] as i64;
+    let nanoseconds = ((self.0.data()[1] as i64) << 32) + self.0.data()[0] as i64;
+    let seconds = (day - JULIAN_DAY_OF_EPOCH) * SECONDS_PER_DAY;
+    Some(seconds * MILLIS_PER_SECOND + nanoseconds / NANOS_PER_MICRO / MICROS_PER_MILLI)
+  }
+
+  fn as_micros(&self) -> Option<i64> {
+    let day = self.0.data()[2] as i64;
+    let nanoseconds = ((self.0.data()[1] as i64) << 32) + self.0.data()[0] as i64;
+    let seconds = (day - JULIAN_DAY_OF_EPOCH) * SECONDS_PER_DAY;
+    Some(seconds * MILLIS_PER_SECOND * MICROS_PER_MILLI + nanoseconds / NANOS_PER_MICRO)
+  }
+
+  fn as_nanos(&self) -> Option<i64> {
+    let day = self.0.data()[2] as i64;
+    let nanoseconds = ((self.0.data()[1] as i64) << 32) + self.0.data()[0] as i64;
+    let seconds = (day - JULIAN_DAY_OF_EPOCH) * SECONDS_PER_DAY;
+    Some(seconds * MILLIS_PER_SECOND * MICROS_PER_MILLI * NANOS_PER_MICRO + nanoseconds)
+  }
+}
+
 impl Deserialize for Timestamp {
   // existential type Reader: Reader<Item = Self>;
   type Reader = sum::Sum3<
@@ -1835,7 +1888,8 @@ impl Deserialize for Timestamp {
             / (SECONDS_PER_DAY * MILLIS_PER_SECOND);
           let nanoseconds: i64 = (millis
             - ((day - JULIAN_DAY_OF_EPOCH) * SECONDS_PER_DAY * MILLIS_PER_SECOND))
-            * 1_000_000;
+            * MICROS_PER_MILLI
+            * NANOS_PER_MICRO;
 
           Ok(Timestamp(Int96::new(
             (nanoseconds & 0xffff).try_into().unwrap(),
@@ -1867,7 +1921,7 @@ impl Deserialize for Timestamp {
               * SECONDS_PER_DAY
               * MILLIS_PER_SECOND
               * MICROS_PER_MILLI))
-            * 1_000;
+            * NANOS_PER_MICRO;
 
           Ok(Timestamp(Int96::new(
             (nanoseconds & 0xffff).try_into().unwrap(),
@@ -1881,6 +1935,12 @@ impl Deserialize for Timestamp {
     }
   }
 }
+
+#[derive(Clone, Hash, PartialEq, Eq, Debug)]
+pub struct Date(pub(super) i32);
+#[derive(Clone, Hash, PartialEq, Eq, Debug)]
+pub struct Time(pub(super) i64);
+
 // impl Deserialize for parquet::data_type::Decimal {
 //  type Schema = DecimalSchema;
 // type Reader = Reader;
@@ -1912,6 +1972,7 @@ impl Deserialize for Timestamp {
 //  scale: u32,
 //  precision: u32,
 // }
+
 impl Deserialize for Vec<u8> {
   type Reader = ByteArrayReader;
   type Schema = VecSchema;
@@ -1983,62 +2044,170 @@ impl Deserialize for String {
     )
   }
 }
-impl Deserialize for [u8; 1024] {
-  // existential type Reader: Reader<Item = Self>;
-  type Reader =
-    MapReader<FixedLenByteArrayReader, fn(Vec<u8>) -> Result<Self, ParquetError>>;
-  type Schema = ArraySchema<Self>;
 
-  fn parse(schema: &Type) -> Result<(String, Self::Schema), ParquetError> {
-    if schema.is_primitive()
-      && schema.get_basic_info().repetition() == Repetition::REQUIRED
-      && schema.get_physical_type() == PhysicalType::FIXED_LEN_BYTE_ARRAY
-      && schema.get_basic_info().logical_type() == LogicalType::NONE
-      && schema.get_type_length() == 1024
-    {
-      return Ok((schema.name().to_owned(), ArraySchema(PhantomData)));
+macro_rules! impl_parquet_deserialize_array {
+  ($i:tt) => {
+    impl Deserialize for [u8; $i] {
+      // existential type Reader: Reader<Item = Self>;
+      type Reader =
+        MapReader<FixedLenByteArrayReader, fn(Vec<u8>) -> Result<Self, ParquetError>>;
+      type Schema = ArraySchema<Self>;
+
+      fn parse(schema: &Type) -> Result<(String, Self::Schema), ParquetError> {
+        if schema.is_primitive()
+          && schema.get_basic_info().repetition() == Repetition::REQUIRED
+          && schema.get_physical_type() == PhysicalType::FIXED_LEN_BYTE_ARRAY
+          && schema.get_basic_info().logical_type() == LogicalType::NONE
+          && schema.get_type_length() == $i
+        {
+          return Ok((schema.name().to_owned(), ArraySchema(PhantomData)));
+        }
+        Err(ParquetError::General(String::from("")))
+      }
+
+      fn reader(
+        _schema: &Self::Schema,
+        path: &mut Vec<String>,
+        curr_def_level: i16,
+        curr_rep_level: i16,
+        paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
+      ) -> Self::Reader
+      {
+        let col_path = ColumnPath::new(path.to_vec());
+        let (col_descr, col_reader) = paths.remove(&col_path).unwrap();
+        assert_eq!(
+          (curr_def_level, curr_rep_level),
+          (col_descr.max_def_level(), col_descr.max_rep_level())
+        );
+        MapReader(
+          FixedLenByteArrayReader {
+            column: TypedTripletIter::<FixedLenByteArrayType>::new(
+              curr_def_level,
+              curr_rep_level,
+              DEFAULT_BATCH_SIZE,
+              col_reader,
+            ),
+          },
+          (|bytes: Vec<_>| {
+            let mut ret = std::mem::MaybeUninit::<Self>::uninitialized();
+            assert_eq!(bytes.len(), unsafe { ret.get_ref().len() });
+            unsafe {
+              std::ptr::copy_nonoverlapping(
+                bytes.as_ptr(),
+                ret.get_mut().as_mut_ptr(),
+                bytes.len(),
+              )
+            };
+            Ok(unsafe { ret.into_inner() })
+          }) as fn(_) -> _,
+        )
+      }
     }
-    Err(ParquetError::General(String::from("")))
-  }
+    impl Deserialize for Box<[u8; $i]> {
+      // existential type Reader: Reader<Item = Self>;
+      type Reader =
+        MapReader<FixedLenByteArrayReader, fn(Vec<u8>) -> Result<Self, ParquetError>>;
+      type Schema = ArraySchema<[u8; $i]>;
 
-  fn reader(
-    _schema: &Self::Schema,
-    path: &mut Vec<String>,
-    curr_def_level: i16,
-    curr_rep_level: i16,
-    paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
-  ) -> Self::Reader
-  {
-    let col_path = ColumnPath::new(path.to_vec());
-    let (col_descr, col_reader) = paths.remove(&col_path).unwrap();
-    assert_eq!(
-      (curr_def_level, curr_rep_level),
-      (col_descr.max_def_level(), col_descr.max_rep_level())
-    );
-    MapReader(
-      FixedLenByteArrayReader {
-        column: TypedTripletIter::<FixedLenByteArrayType>::new(
-          curr_def_level,
-          curr_rep_level,
-          DEFAULT_BATCH_SIZE,
-          col_reader,
-        ),
-      },
-      (|bytes: Vec<_>| {
-        let mut ret = std::mem::MaybeUninit::<Self>::uninitialized();
-        assert_eq!(bytes.len(), unsafe { ret.get_ref().len() });
-        unsafe {
-          std::ptr::copy_nonoverlapping(
-            bytes.as_ptr(),
-            ret.get_mut().as_mut_ptr(),
-            bytes.len(),
-          )
-        };
-        Ok(unsafe { ret.into_inner() })
-      }) as fn(_) -> _,
-    )
-  }
+      fn parse(schema: &Type) -> Result<(String, Self::Schema), ParquetError> {
+        <[u8; $i]>::parse(schema)
+      }
+
+      fn reader(
+        _schema: &Self::Schema,
+        path: &mut Vec<String>,
+        curr_def_level: i16,
+        curr_rep_level: i16,
+        paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
+      ) -> Self::Reader
+      {
+        let col_path = ColumnPath::new(path.to_vec());
+        let (col_descr, col_reader) = paths.remove(&col_path).unwrap();
+        assert_eq!(
+          (curr_def_level, curr_rep_level),
+          (col_descr.max_def_level(), col_descr.max_rep_level())
+        );
+        MapReader(
+          FixedLenByteArrayReader {
+            column: TypedTripletIter::<FixedLenByteArrayType>::new(
+              curr_def_level,
+              curr_rep_level,
+              DEFAULT_BATCH_SIZE,
+              col_reader,
+            ),
+          },
+          (|bytes: Vec<_>| {
+            let mut ret = box [0u8; $i];
+            assert_eq!(bytes.len(), ret.len());
+            unsafe {
+              std::ptr::copy_nonoverlapping(bytes.as_ptr(), ret.as_mut_ptr(), bytes.len())
+            };
+            Ok(ret)
+          }) as fn(_) -> _,
+        )
+      }
+    }
+  };
 }
+
+// Implemented on common array lengths, copied from arrayvec
+impl_parquet_deserialize_array!(0);
+impl_parquet_deserialize_array!(1);
+impl_parquet_deserialize_array!(2);
+impl_parquet_deserialize_array!(3);
+impl_parquet_deserialize_array!(4);
+impl_parquet_deserialize_array!(5);
+impl_parquet_deserialize_array!(6);
+impl_parquet_deserialize_array!(7);
+impl_parquet_deserialize_array!(8);
+impl_parquet_deserialize_array!(9);
+impl_parquet_deserialize_array!(10);
+impl_parquet_deserialize_array!(11);
+impl_parquet_deserialize_array!(12);
+impl_parquet_deserialize_array!(13);
+impl_parquet_deserialize_array!(14);
+impl_parquet_deserialize_array!(15);
+impl_parquet_deserialize_array!(16);
+impl_parquet_deserialize_array!(17);
+impl_parquet_deserialize_array!(18);
+impl_parquet_deserialize_array!(19);
+impl_parquet_deserialize_array!(20);
+impl_parquet_deserialize_array!(21);
+impl_parquet_deserialize_array!(22);
+impl_parquet_deserialize_array!(23);
+impl_parquet_deserialize_array!(24);
+impl_parquet_deserialize_array!(25);
+impl_parquet_deserialize_array!(26);
+impl_parquet_deserialize_array!(27);
+impl_parquet_deserialize_array!(28);
+impl_parquet_deserialize_array!(29);
+impl_parquet_deserialize_array!(30);
+impl_parquet_deserialize_array!(31);
+impl_parquet_deserialize_array!(32);
+impl_parquet_deserialize_array!(40);
+impl_parquet_deserialize_array!(48);
+impl_parquet_deserialize_array!(50);
+impl_parquet_deserialize_array!(56);
+impl_parquet_deserialize_array!(64);
+impl_parquet_deserialize_array!(72);
+impl_parquet_deserialize_array!(96);
+impl_parquet_deserialize_array!(100);
+impl_parquet_deserialize_array!(128);
+impl_parquet_deserialize_array!(160);
+impl_parquet_deserialize_array!(192);
+impl_parquet_deserialize_array!(200);
+impl_parquet_deserialize_array!(224);
+impl_parquet_deserialize_array!(256);
+impl_parquet_deserialize_array!(384);
+impl_parquet_deserialize_array!(512);
+impl_parquet_deserialize_array!(768);
+impl_parquet_deserialize_array!(1024);
+impl_parquet_deserialize_array!(2048);
+impl_parquet_deserialize_array!(4096);
+impl_parquet_deserialize_array!(8192);
+impl_parquet_deserialize_array!(16384);
+impl_parquet_deserialize_array!(32768);
+impl_parquet_deserialize_array!(65536);
 
 macro_rules! impl_parquet_deserialize_tuple {
   ($($t:ident $i:tt)*) => (
@@ -2054,8 +2223,11 @@ macro_rules! impl_parquet_deserialize_tuple {
         $((self.0).$i.advance_columns();)*
       }
       fn has_next(&self) -> bool {
-        // self.$first_name.has_next()
-        $((self.0).$i.has_next() &&)* true
+        // $((self.0).$i.has_next() &&)* true
+        $(if true { (self.0).$i.has_next() } else)*
+        {
+          true
+        }
       }
       fn current_def_level(&self) -> i16 {
         $(if true { (self.0).$i.current_def_level() } else)*
@@ -2070,23 +2242,23 @@ macro_rules! impl_parquet_deserialize_tuple {
         }
       }
     }
-    impl<$($t,)*> str::FromStr for RootSchema<($($t,)*),TupleSchema<($((String,$t::Schema,),)*)>> where $($t: Deserialize,)* {
-      type Err = ParquetError;
+    // impl<$($t,)*> str::FromStr for RootSchema<($($t,)*),TupleSchema<($((String,$t::Schema,),)*)>> where $($t: Deserialize,)* {
+    //   type Err = ParquetError;
 
-      fn from_str(s: &str) -> Result<Self, Self::Err> {
-        parse_message_type(s).and_then(|x|<Root<($($t,)*)> as Deserialize>::parse(&x).map_err(|err| {
-          // let x: Type = <Root<($($t,)*)> as Deserialize>::render("", &<Root<($($t,)*)> as Deserialize>::placeholder());
-          let a = Vec::new();
-          // print_schema(&mut a, &x);
-          ParquetError::General(format!(
-            "Types don't match schema.\nSchema is:\n{}\nBut types require:\n{}\nError: {}",
-            s,
-            String::from_utf8(a).unwrap(),
-            err
-          ))
-        })).map(|x|x.1)
-      }
-    }
+    //   fn from_str(s: &str) -> Result<Self, Self::Err> {
+    //     parse_message_type(s).and_then(|x|<Root<($($t,)*)> as Deserialize>::parse(&x).map_err(|err| {
+    //       // let x: Type = <Root<($($t,)*)> as Deserialize>::render("", &<Root<($($t,)*)> as Deserialize>::placeholder());
+    //       let a = Vec::new();
+    //       // print_schema(&mut a, &x);
+    //       ParquetError::General(format!(
+    //         "Types don't match schema.\nSchema is:\n{}\nBut types require:\n{}\nError: {}",
+    //         s,
+    //         String::from_utf8(a).unwrap(),
+    //         err
+    //       ))
+    //     })).map(|x|x.1)
+    //   }
+    // }
     impl<$($t,)*> Debug for TupleSchema<($((String,$t,),)*)> where $($t: Debug,)* {
       fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         f.debug_tuple("TupleSchema")
@@ -2094,7 +2266,12 @@ macro_rules! impl_parquet_deserialize_tuple {
           .finish()
       }
     }
-    impl<$($t,)*> DebugType for TupleSchema<($((String,$t,),)*)> where $($t: DebugType,)* {
+    impl<$($t,)*> Display for TupleSchema<($((String,$t,),)*)> where $($t: Display,)* {
+      fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        f.write_str("TupleSchema")
+      }
+    }
+    impl<$($t,)*> DisplayType for TupleSchema<($((String,$t,),)*)> where $($t: DisplayType,)* {
       fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         f.write_str("TupleSchema")
       }
@@ -2142,24 +2319,6 @@ macro_rules! impl_parquet_deserialize_tuple {
         TupleReader(($($t,)*))
       }
     }
-    // impl<$($t,)*> Deserialize for Option<($($t,)*)> where $($t: Deserialize,)* {
-    //  type Schema = OptionSchema<TupleSchema<($((String,$t::Schema,),)*)>>;
-    //  type Reader = OptionReader<TupleReader<($($t::Reader,)*)>>;
-
-    //  fn parse(schema: &Type) -> Result<(String,Self::Schema),ParquetError> {
-    //    if schema.is_group() && !schema.is_schema() && schema.get_basic_info().repetition() == Repetition::OPTIONAL {
-    //      let mut fields = schema.get_fields().iter();
-    //      let schema_ = OptionSchema(TupleSchema(($(fields.next().ok_or(ParquetError::General(String::from("Group missing field"))).and_then(|x|$t::parse(&**x))?,)*)));
-    //      if fields.next().is_none() {
-    //        return Ok((schema.name().to_owned(), schema_))
-    //      }
-    //    }
-    //    Err(ParquetError::General(String::from("")))
-    //  }
-    //  fn reader(schema: &Self::Schema, path: &mut Vec<String>, curr_def_level: i16, curr_rep_level: i16, paths: &mut HashMap<ColumnPath, (ColumnDescPtr,ColumnReader)>) -> Self::Reader {
-    //    OptionReader{def_level: curr_def_level, reader: <($($t,)*) as Deserialize>::reader(&schema.0, path, curr_def_level+1, curr_rep_level, paths)}
-    //  }
-    // }
     impl<$($t,)*> Downcast<($($t,)*)> for Value where Value: $(Downcast<$t> +)* {
       fn downcast(self) -> Result<($($t,)*),ParquetError> {
         #[allow(unused_mut,unused_variables)]
