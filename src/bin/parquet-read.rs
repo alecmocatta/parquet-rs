@@ -58,7 +58,7 @@ use std::{env, fs::File, path::Path, process};
 
 use parquet::{
   file::reader::{FileReader, SerializedFileReader},
-  record::types::Value,
+  record::types::Row,
 };
 
 fn main() {
@@ -81,7 +81,7 @@ fn main() {
   let parquet_reader = SerializedFileReader::new(file).unwrap();
 
   // Use full schema as projected schema
-  let mut iter = parquet_reader.get_row_iter::<Value>(None).unwrap();
+  let mut iter = parquet_reader.get_row_iter::<Row>(None).unwrap();
 
   let mut start = 0;
   let end = num_records.unwrap_or(0);

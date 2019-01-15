@@ -65,14 +65,14 @@
 //!
 //! use parquet::{
 //!   file::reader::{FileReader, SerializedFileReader},
-//!   record::types::Value,
+//!   record::types::Row,
 //! };
 //! use std::convert::TryFrom;
 //!
 //! let reader = SerializedFileReader::try_from("data/alltypes_plain.parquet").unwrap();
 //!
 //! // Reading data using record API with optional projection schema.
-//! let mut iter = reader.get_row_iter::<Value>(None).unwrap();
+//! let mut iter = reader.get_row_iter::<Row>(None).unwrap();
 //! while let Some(record) = iter.next() {
 //!   // See record API for different field accessors
 //!   println!("{:?}", record);
