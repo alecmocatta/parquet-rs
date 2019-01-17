@@ -1201,47 +1201,13 @@ where Root<T>: Deserialize
 #[cfg(test)]
 mod tests {
   use super::*;
-  use errors::{ParquetError, Result};
+  use errors::Result;
   use file::reader::{FileReader, SerializedFileReader};
-  use record::types::Value;
+  use record::types::{Row, Value};
   use schema::parser::parse_message_type;
   use util::test_common::get_test_file;
 
   // Convenient macros to assemble row, list, map, and group.
-
-  macro_rules! row {
-    ( $( ($name:expr, $e:expr) ), * ) => {
-      {
-        group!($( ($name, $e) ), *).as_group().unwrap()
-      }
-    }
-  }
-
-  macro_rules! list {
-    ( $( $e:expr ), * ) => {
-      {
-        #[allow(unused_mut)]
-        let mut result = Vec::new();
-        $(
-          result.push($e);
-        )*
-        Value::List(List(result))
-      }
-    }
-  }
-
-  macro_rules! map {
-    ( $( ($k:expr, $v:expr) ), * ) => {
-      {
-        #[allow(unused_mut)]
-        let mut result = HashMap::new();
-        $(
-          result.insert($k, $v);
-        )*
-        Value::Map(Map(result))
-      }
-    }
-  }
 
   macro_rules! group {
     ( $( ($name:expr, $e:expr) ), * ) => {
@@ -1254,17 +1220,63 @@ mod tests {
           keys.insert($name, result.len());
           result.push($e);
         )*
-        Value::Group(Group(result, std::rc::Rc::new(keys)))
+        Group(result, std::rc::Rc::new(keys))
       }
     }
   }
+  macro_rules! groupv {
+    ( $( ($name:expr, $e:expr) ), * ) => {
+      Value::Group(group!($( ($name, $e) ), *))
+    }
+  }
+  macro_rules! row {
+    ( $( ($name:expr, $e:expr) ), * ) => {
+      group!($(($name,$e)),*)
+    }
+  }
 
-  macro_rules! some {
+  macro_rules! list {
+    ( $( $e:expr ), * ) => {
+      {
+        #[allow(unused_mut)]
+        let mut result = Vec::new();
+        $(
+          result.push($e);
+        )*
+        List(result)
+      }
+    }
+  }
+  macro_rules! listv {
+    ( $( $e:expr ), * ) => {
+      Value::List(list!($($e),*))
+    }
+  }
+
+  macro_rules! map {
+    ( $( ($k:expr, $v:expr) ), * ) => {
+      {
+        #[allow(unused_mut)]
+        let mut result = HashMap::new();
+        $(
+          result.insert($k, $v);
+        )*
+        Map(result)
+      }
+    }
+  }
+  macro_rules! mapv {
+    ( $( ($k:expr, $v:expr) ), * ) => {
+      Value::Map(map!($(($k,$v)),*))
+    }
+  }
+
+  macro_rules! somev {
     ( $e:expr ) => {
       Value::Option(Box::new(Some($e)))
     };
   }
-  macro_rules! none {
+  macro_rules! nonev {
     ( ) => {
       Value::Option(Box::new(None))
     };
@@ -1272,160 +1284,221 @@ mod tests {
 
   #[test]
   fn test_file_reader_rows_nulls() {
-    let rows = test_file_reader_rows("nulls.snappy.parquet", None).unwrap();
+    let rows = test_file_reader_rows::<Row>("nulls.snappy.parquet", None).unwrap();
+
     let expected_rows = vec![
       row![(
         "b_struct".to_string(),
-        some![group![("b_c_int".to_string(), none![])]]
+        somev![groupv![("b_c_int".to_string(), nonev![])]]
       )],
       row![(
         "b_struct".to_string(),
-        some![group![("b_c_int".to_string(), none![])]]
+        somev![groupv![("b_c_int".to_string(), nonev![])]]
       )],
       row![(
         "b_struct".to_string(),
-        some![group![("b_c_int".to_string(), none![])]]
+        somev![groupv![("b_c_int".to_string(), nonev![])]]
       )],
       row![(
         "b_struct".to_string(),
-        some![group![("b_c_int".to_string(), none![])]]
+        somev![groupv![("b_c_int".to_string(), nonev![])]]
       )],
       row![(
         "b_struct".to_string(),
-        some![group![("b_c_int".to_string(), none![])]]
+        somev![groupv![("b_c_int".to_string(), nonev![])]]
       )],
       row![(
         "b_struct".to_string(),
-        some![group![("b_c_int".to_string(), none![])]]
+        somev![groupv![("b_c_int".to_string(), nonev![])]]
       )],
       row![(
         "b_struct".to_string(),
-        some![group![("b_c_int".to_string(), none![])]]
+        somev![groupv![("b_c_int".to_string(), nonev![])]]
       )],
       row![(
         "b_struct".to_string(),
-        some![group![("b_c_int".to_string(), none![])]]
+        somev![groupv![("b_c_int".to_string(), nonev![])]]
       )],
     ];
+
+    assert_eq!(rows, expected_rows);
+  }
+
+  #[test]
+  fn test_file_reader_rows_nulls_typed() {
+    type RowTyped = (Option<(Option<i32>,)>,);
+
+    let rows = test_file_reader_rows::<RowTyped>("nulls.snappy.parquet", None).unwrap();
+
+    let expected_rows: Vec<RowTyped> = vec![
+      (Some((None,)),),
+      (Some((None,)),),
+      (Some((None,)),),
+      (Some((None,)),),
+      (Some((None,)),),
+      (Some((None,)),),
+      (Some((None,)),),
+      (Some((None,)),),
+    ];
+
     assert_eq!(rows, expected_rows);
   }
 
   #[test]
   fn test_file_reader_rows_nonnullable() {
-    let rows = test_file_reader_rows("nonnullable.impala.parquet", None).unwrap();
+    let rows = test_file_reader_rows::<Row>("nonnullable.impala.parquet", None).unwrap();
+
     let expected_rows = vec![row![
       ("ID".to_string(), Value::I64(8)),
-      ("Int_Array".to_string(), list![Value::I32(-1)]),
+      ("Int_Array".to_string(), listv![Value::I32(-1)]),
       (
         "int_array_array".to_string(),
-        list![list![Value::I32(-1), Value::I32(-2)], list![]]
+        listv![listv![Value::I32(-1), Value::I32(-2)], listv![]]
       ),
       (
         "Int_Map".to_string(),
-        map![(Value::String("k1".to_string()), Value::I32(-1))]
+        mapv![(Value::String("k1".to_string()), Value::I32(-1))]
       ),
       (
         "int_map_array".to_string(),
-        list![
-          map![],
-          map![(Value::String("k1".to_string()), Value::I32(1))],
-          map![],
-          map![]
+        listv![
+          mapv![],
+          mapv![(Value::String("k1".to_string()), Value::I32(1))],
+          mapv![],
+          mapv![]
         ]
       ),
       (
         "nested_Struct".to_string(),
-        group![
+        groupv![
           ("a".to_string(), Value::I32(-1)),
-          ("B".to_string(), list![Value::I32(-1)]),
+          ("B".to_string(), listv![Value::I32(-1)]),
           (
             "c".to_string(),
-            group![(
+            groupv![(
               "D".to_string(),
-              list![list![group![
+              listv![listv![groupv![
                 ("e".to_string(), Value::I32(-1)),
                 ("f".to_string(), Value::String("nonnullable".to_string()))
               ]]]
             )]
           ),
-          ("G".to_string(), map![])
+          ("G".to_string(), mapv![])
         ]
       )
     ]];
+
+    assert_eq!(rows, expected_rows);
+  }
+
+  #[test]
+  fn test_file_reader_rows_nonnullable_typed() {
+    type RowTyped = (
+      i64,
+      List<i32>,
+      List<List<i32>>,
+      Map<String, i32>,
+      List<Map<String, i32>>,
+      (
+        i32,
+        List<i32>,
+        (List<List<(i32, String)>>,),
+        Map<String, ((List<f64>,),)>,
+      ),
+    );
+
+    let rows =
+      test_file_reader_rows::<RowTyped>("nonnullable.impala.parquet", None).unwrap();
+
+    let expected_rows: Vec<RowTyped> = vec![(
+      8,
+      list![-1],
+      list![list![-1, -2], list![]],
+      map![("k1".to_string(), -1)],
+      list![map![], map![("k1".to_string(), 1i32)], map![], map![]],
+      (
+        -1,
+        list![-1],
+        (list![list![(-1, "nonnullable".to_string())]],),
+        map![],
+      ),
+    )];
+
     assert_eq!(rows, expected_rows);
   }
 
   #[test]
   fn test_file_reader_rows_nullable() {
-    let rows = test_file_reader_rows("nullable.impala.parquet", None).unwrap();
+    let rows = test_file_reader_rows::<Row>("nullable.impala.parquet", None).unwrap();
+
     let expected_rows = vec![
       row![
-        ("id".to_string(), some![Value::I64(1)]),
+        ("id".to_string(), somev![Value::I64(1)]),
         (
           "int_array".to_string(),
-          some![list![
-            some![Value::I32(1)],
-            some![Value::I32(2)],
-            some![Value::I32(3)]
+          somev![listv![
+            somev![Value::I32(1)],
+            somev![Value::I32(2)],
+            somev![Value::I32(3)]
           ]]
         ),
         (
           "int_array_Array".to_string(),
-          some![list![
-            some![list![some![Value::I32(1)], some![Value::I32(2)]]],
-            some![list![some![Value::I32(3)], some![Value::I32(4)]]]
+          somev![listv![
+            somev![listv![somev![Value::I32(1)], somev![Value::I32(2)]]],
+            somev![listv![somev![Value::I32(3)], somev![Value::I32(4)]]]
           ]]
         ),
         (
           "int_map".to_string(),
-          some![map![
-            (Value::String("k1".to_string()), some![Value::I32(1)]),
-            (Value::String("k2".to_string()), some![Value::I32(100)])
+          somev![mapv![
+            (Value::String("k1".to_string()), somev![Value::I32(1)]),
+            (Value::String("k2".to_string()), somev![Value::I32(100)])
           ]]
         ),
         (
           "int_Map_Array".to_string(),
-          some![list![some![map![(
+          somev![listv![somev![mapv![(
             Value::String("k1".to_string()),
-            some![Value::I32(1)]
+            somev![Value::I32(1)]
           )]]]]
         ),
         (
           "nested_struct".to_string(),
-          some![group![
-            ("A".to_string(), some![Value::I32(1)]),
-            ("b".to_string(), some![list![some![Value::I32(1)]]]),
+          somev![groupv![
+            ("A".to_string(), somev![Value::I32(1)]),
+            ("b".to_string(), somev![listv![somev![Value::I32(1)]]]),
             (
               "C".to_string(),
-              some![group![(
+              somev![groupv![(
                 "d".to_string(),
-                some![list![
-                  some![list![
-                    some![group![
-                      ("E".to_string(), some![Value::I32(10)]),
-                      ("F".to_string(), some![Value::String("aaa".to_string())])
+                somev![listv![
+                  somev![listv![
+                    somev![groupv![
+                      ("E".to_string(), somev![Value::I32(10)]),
+                      ("F".to_string(), somev![Value::String("aaa".to_string())])
                     ]],
-                    some![group![
-                      ("E".to_string(), some![Value::I32(-10)]),
-                      ("F".to_string(), some![Value::String("bbb".to_string())])
+                    somev![groupv![
+                      ("E".to_string(), somev![Value::I32(-10)]),
+                      ("F".to_string(), somev![Value::String("bbb".to_string())])
                     ]]
                   ]],
-                  some![list![some![group![
-                    ("E".to_string(), some![Value::I32(11)]),
-                    ("F".to_string(), some![Value::String("c".to_string())])
+                  somev![listv![somev![groupv![
+                    ("E".to_string(), somev![Value::I32(11)]),
+                    ("F".to_string(), somev![Value::String("c".to_string())])
                   ]]]]
                 ]]
               )]]
             ),
             (
               "g".to_string(),
-              some![map![(
+              somev![mapv![(
                 Value::String("foo".to_string()),
-                some![group![(
+                somev![groupv![(
                   "H".to_string(),
-                  some![group![(
+                  somev![groupv![(
                     "i".to_string(),
-                    some![list![some![Value::F64(1.1)]]]
+                    somev![listv![somev![Value::F64(1.1)]]]
                   )]]
                 )]]
               )]]
@@ -1434,125 +1507,129 @@ mod tests {
         )
       ],
       row![
-        ("id".to_string(), some![Value::I64(2)]),
+        ("id".to_string(), somev![Value::I64(2)]),
         (
           "int_array".to_string(),
-          some![list![
-            none![],
-            some![Value::I32(1)],
-            some![Value::I32(2)],
-            none![],
-            some![Value::I32(3)],
-            none![]
+          somev![listv![
+            nonev![],
+            somev![Value::I32(1)],
+            somev![Value::I32(2)],
+            nonev![],
+            somev![Value::I32(3)],
+            nonev![]
           ]]
         ),
         (
           "int_array_Array".to_string(),
-          some![list![
-            some![list![
-              none![],
-              some![Value::I32(1)],
-              some![Value::I32(2)],
-              none![]
+          somev![listv![
+            somev![listv![
+              nonev![],
+              somev![Value::I32(1)],
+              somev![Value::I32(2)],
+              nonev![]
             ]],
-            some![list![some![Value::I32(3)], none![], some![Value::I32(4)]]],
-            some![list![]],
-            none![]
+            somev![listv![
+              somev![Value::I32(3)],
+              nonev![],
+              somev![Value::I32(4)]
+            ]],
+            somev![listv![]],
+            nonev![]
           ]]
         ),
         (
           "int_map".to_string(),
-          some![map![
-            (Value::String("k1".to_string()), some![Value::I32(2)]),
-            (Value::String("k2".to_string()), none![])
+          somev![mapv![
+            (Value::String("k1".to_string()), somev![Value::I32(2)]),
+            (Value::String("k2".to_string()), nonev![])
           ]]
         ),
         (
           "int_Map_Array".to_string(),
-          some![list![
-            some![map![
-              (Value::String("k3".to_string()), none![]),
-              (Value::String("k1".to_string()), some![Value::I32(1)])
+          somev![listv![
+            somev![mapv![
+              (Value::String("k3".to_string()), nonev![]),
+              (Value::String("k1".to_string()), somev![Value::I32(1)])
             ]],
-            none![],
-            some![map![]]
+            nonev![],
+            somev![mapv![]]
           ]]
         ),
         (
           "nested_struct".to_string(),
-          some![group![
-            ("A".to_string(), none![]),
-            ("b".to_string(), some![list![none![]]]),
+          somev![groupv![
+            ("A".to_string(), nonev![]),
+            ("b".to_string(), somev![listv![nonev![]]]),
             (
               "C".to_string(),
-              some![group![(
+              somev![groupv![(
                 "d".to_string(),
-                some![list![
-                  some![list![
-                    some![group![
-                      ("E".to_string(), none![]),
-                      ("F".to_string(), none![])
+                somev![listv![
+                  somev![listv![
+                    somev![groupv![
+                      ("E".to_string(), nonev![]),
+                      ("F".to_string(), nonev![])
                     ]],
-                    some![group![
-                      ("E".to_string(), some![Value::I32(10)]),
-                      ("F".to_string(), some![Value::String("aaa".to_string())])
+                    somev![groupv![
+                      ("E".to_string(), somev![Value::I32(10)]),
+                      ("F".to_string(), somev![Value::String("aaa".to_string())])
                     ]],
-                    some![group![
-                      ("E".to_string(), none![]),
-                      ("F".to_string(), none![])
+                    somev![groupv![
+                      ("E".to_string(), nonev![]),
+                      ("F".to_string(), nonev![])
                     ]],
-                    some![group![
-                      ("E".to_string(), some![Value::I32(-10)]),
-                      ("F".to_string(), some![Value::String("bbb".to_string())])
+                    somev![groupv![
+                      ("E".to_string(), somev![Value::I32(-10)]),
+                      ("F".to_string(), somev![Value::String("bbb".to_string())])
                     ]],
-                    some![group![
-                      ("E".to_string(), none![]),
-                      ("F".to_string(), none![])
+                    somev![groupv![
+                      ("E".to_string(), nonev![]),
+                      ("F".to_string(), nonev![])
                     ]]
                   ]],
-                  some![list![
-                    some![group![
-                      ("E".to_string(), some![Value::I32(11)]),
-                      ("F".to_string(), some![Value::String("c".to_string())])
+                  somev![listv![
+                    somev![groupv![
+                      ("E".to_string(), somev![Value::I32(11)]),
+                      ("F".to_string(), somev![Value::String("c".to_string())])
                     ]],
-                    none![]
+                    nonev![]
                   ]],
-                  some![list![]],
-                  none![]
+                  somev![listv![]],
+                  nonev![]
                 ]]
               )]]
             ),
             (
               "g".to_string(),
-              some![map![
+              somev![mapv![
                 (
                   Value::String("g1".to_string()),
-                  some![group![(
+                  somev![groupv![(
                     "H".to_string(),
-                    some![group![(
+                    somev![groupv![(
                       "i".to_string(),
-                      some![list![some![Value::F64(2.2)], none![]]]
+                      somev![listv![somev![Value::F64(2.2)], nonev![]]]
                     )]]
                   )]]
                 ),
                 (
                   Value::String("g2".to_string()),
-                  some![group![(
+                  somev![groupv![(
                     "H".to_string(),
-                    some![group![("i".to_string(), some![list![]])]]
+                    somev![groupv![("i".to_string(), somev![listv![]])]]
                   )]]
                 ),
-                (Value::String("g3".to_string()), none![]),
+                (Value::String("g3".to_string()), nonev![]),
                 (
                   Value::String("g4".to_string()),
-                  some![group![(
+                  somev![groupv![(
                     "H".to_string(),
-                    some![group![("i".to_string(), none![])]]
+                    somev![groupv![("i".to_string(), nonev![])]]
                   )]]
                 ),
                 (
                   Value::String("g5".to_string()),
-                  some![group![("H".to_string(), none![])]]
+                  somev![groupv![("H".to_string(), nonev![])]]
                 )
               ]]
             )
@@ -1560,61 +1637,67 @@ mod tests {
         )
       ],
       row![
-        ("id".to_string(), some![Value::I64(3)]),
-        ("int_array".to_string(), some![list![]]),
-        ("int_array_Array".to_string(), some![list![none![]]]),
-        ("int_map".to_string(), some![map![]]),
-        ("int_Map_Array".to_string(), some![list![none![], none![]]]),
+        ("id".to_string(), somev![Value::I64(3)]),
+        ("int_array".to_string(), somev![listv![]]),
+        ("int_array_Array".to_string(), somev![listv![nonev![]]]),
+        ("int_map".to_string(), somev![mapv![]]),
+        (
+          "int_Map_Array".to_string(),
+          somev![listv![nonev![], nonev![]]]
+        ),
         (
           "nested_struct".to_string(),
-          some![group![
-            ("A".to_string(), none![]),
-            ("b".to_string(), none![]),
+          somev![groupv![
+            ("A".to_string(), nonev![]),
+            ("b".to_string(), nonev![]),
             (
               "C".to_string(),
-              some![group![("d".to_string(), some![list![]])]]
+              somev![groupv![("d".to_string(), somev![listv![]])]]
             ),
-            ("g".to_string(), some![map![]])
+            ("g".to_string(), somev![mapv![]])
           ]]
         )
       ],
       row![
-        ("id".to_string(), some![Value::I64(4)]),
-        ("int_array".to_string(), none![]),
-        ("int_array_Array".to_string(), some![list![]]),
-        ("int_map".to_string(), some![map![]]),
-        ("int_Map_Array".to_string(), some![list![]]),
+        ("id".to_string(), somev![Value::I64(4)]),
+        ("int_array".to_string(), nonev![]),
+        ("int_array_Array".to_string(), somev![listv![]]),
+        ("int_map".to_string(), somev![mapv![]]),
+        ("int_Map_Array".to_string(), somev![listv![]]),
         (
           "nested_struct".to_string(),
-          some![group![
-            ("A".to_string(), none![]),
-            ("b".to_string(), none![]),
-            ("C".to_string(), some![group![("d".to_string(), none![])]]),
-            ("g".to_string(), none![])
+          somev![groupv![
+            ("A".to_string(), nonev![]),
+            ("b".to_string(), nonev![]),
+            (
+              "C".to_string(),
+              somev![groupv![("d".to_string(), nonev![])]]
+            ),
+            ("g".to_string(), nonev![])
           ]]
         )
       ],
       row![
-        ("id".to_string(), some![Value::I64(5)]),
-        ("int_array".to_string(), none![]),
-        ("int_array_Array".to_string(), none![]),
-        ("int_map".to_string(), some![map![]]),
-        ("int_Map_Array".to_string(), none![]),
+        ("id".to_string(), somev![Value::I64(5)]),
+        ("int_array".to_string(), nonev![]),
+        ("int_array_Array".to_string(), nonev![]),
+        ("int_map".to_string(), somev![mapv![]]),
+        ("int_Map_Array".to_string(), nonev![]),
         (
           "nested_struct".to_string(),
-          some![group![
-            ("A".to_string(), none![]),
-            ("b".to_string(), none![]),
-            ("C".to_string(), none![]),
+          somev![groupv![
+            ("A".to_string(), nonev![]),
+            ("b".to_string(), nonev![]),
+            ("C".to_string(), nonev![]),
             (
               "g".to_string(),
-              some![map![(
+              somev![mapv![(
                 Value::String("foo".to_string()),
-                some![group![(
+                somev![groupv![(
                   "H".to_string(),
-                  some![group![(
+                  somev![groupv![(
                     "i".to_string(),
-                    some![list![some![Value::F64(2.2)], some![Value::F64(3.3)]]]
+                    somev![listv![somev![Value::F64(2.2)], somev![Value::F64(3.3)]]]
                   )]]
                 )]]
               )]]
@@ -1623,51 +1706,197 @@ mod tests {
         )
       ],
       row![
-        ("id".to_string(), some![Value::I64(6)]),
-        ("int_array".to_string(), none![]),
-        ("int_array_Array".to_string(), none![]),
-        ("int_map".to_string(), none![]),
-        ("int_Map_Array".to_string(), none![]),
-        ("nested_struct".to_string(), none![])
+        ("id".to_string(), somev![Value::I64(6)]),
+        ("int_array".to_string(), nonev![]),
+        ("int_array_Array".to_string(), nonev![]),
+        ("int_map".to_string(), nonev![]),
+        ("int_Map_Array".to_string(), nonev![]),
+        ("nested_struct".to_string(), nonev![])
       ],
       row![
-        ("id".to_string(), some![Value::I64(7)]),
-        ("int_array".to_string(), none![]),
+        ("id".to_string(), somev![Value::I64(7)]),
+        ("int_array".to_string(), nonev![]),
         (
           "int_array_Array".to_string(),
-          some![list![
-            none![],
-            some![list![some![Value::I32(5)], some![Value::I32(6)]]]
+          somev![listv![
+            nonev![],
+            somev![listv![somev![Value::I32(5)], somev![Value::I32(6)]]]
           ]]
         ),
         (
           "int_map".to_string(),
-          some![map![
-            (Value::String("k1".to_string()), none![]),
-            (Value::String("k3".to_string()), none![])
+          somev![mapv![
+            (Value::String("k1".to_string()), nonev![]),
+            (Value::String("k3".to_string()), nonev![])
           ]]
         ),
-        ("int_Map_Array".to_string(), none![]),
+        ("int_Map_Array".to_string(), nonev![]),
         (
           "nested_struct".to_string(),
-          some![group![
-            ("A".to_string(), some![Value::I32(7)]),
+          somev![groupv![
+            ("A".to_string(), somev![Value::I32(7)]),
             (
               "b".to_string(),
-              some![list![some![Value::I32(2)], some![Value::I32(3)], none![]]]
+              somev![listv![
+                somev![Value::I32(2)],
+                somev![Value::I32(3)],
+                nonev![]
+              ]]
             ),
             (
               "C".to_string(),
-              some![group![(
+              somev![groupv![(
                 "d".to_string(),
-                some![list![some![list![]], some![list![none![]]], none![]]]
+                somev![listv![somev![listv![]], somev![listv![nonev![]]], nonev![]]]
               )]]
             ),
-            ("g".to_string(), none![])
+            ("g".to_string(), nonev![])
           ]]
         )
       ],
     ];
+
+    assert_eq!(rows, expected_rows);
+  }
+
+  #[test]
+  fn test_file_reader_rows_nullable_typed() {
+    type RowTyped = (
+      Option<i64>,
+      Option<List<Option<i32>>>,
+      Option<List<Option<List<Option<i32>>>>>,
+      Option<Map<String, Option<i32>>>,
+      Option<List<Option<Map<String, Option<i32>>>>>,
+      Option<(
+        Option<i32>,
+        Option<List<Option<i32>>>,
+        Option<(Option<List<Option<List<Option<(Option<i32>, Option<String>)>>>>>,)>,
+        Option<Map<String, Option<(Option<(Option<List<Option<f64>>>,)>,)>>>,
+      )>,
+    );
+
+    let rows =
+      test_file_reader_rows::<RowTyped>("nullable.impala.parquet", None).unwrap();
+
+    let expected_rows: Vec<RowTyped> = vec![
+      (
+        Some(1),
+        Some(list![Some(1), Some(2), Some(3)]),
+        Some(list![
+          Some(list![Some(1), Some(2)]),
+          Some(list![Some(3), Some(4)])
+        ]),
+        Some(map![
+          ("k1".to_string(), Some(1)),
+          ("k2".to_string(), Some(100))
+        ]),
+        Some(list![Some(map![("k1".to_string(), Some(1))])]),
+        Some((
+          Some(1),
+          Some(list![Some(1)]),
+          Some((Some(list![
+            Some(list![
+              Some((Some(10), Some("aaa".to_string()))),
+              Some((Some(-10), Some("bbb".to_string())))
+            ]),
+            Some(list![Some((Some(11), Some("c".to_string())))])
+          ]),)),
+          Some(map![(
+            "foo".to_string(),
+            Some((Some((Some(list![Some(1.1)]),)),))
+          )]),
+        )),
+      ),
+      (
+        Some(2),
+        Some(list![None, Some(1), Some(2), None, Some(3), None]),
+        Some(list![
+          Some(list![None, Some(1), Some(2), None]),
+          Some(list![Some(3), None, Some(4)]),
+          Some(list![]),
+          None
+        ]),
+        Some(map![("k1".to_string(), Some(2)), ("k2".to_string(), None)]),
+        Some(list![
+          Some(map![("k3".to_string(), None), ("k1".to_string(), Some(1))]),
+          None,
+          Some(map![])
+        ]),
+        Some((
+          None,
+          Some(list![None]),
+          Some((Some(list![
+            Some(list![
+              Some((None, None)),
+              Some((Some(10), Some("aaa".to_string()))),
+              Some((None, None)),
+              Some((Some(-10), Some("bbb".to_string()))),
+              Some((None, None))
+            ]),
+            Some(list![Some((Some(11), Some("c".to_string()))), None]),
+            Some(list![]),
+            None
+          ]),)),
+          Some(map![
+            (
+              "g1".to_string(),
+              Some((Some((Some(list![Some(2.2), None]),)),))
+            ),
+            ("g2".to_string(), Some((Some((Some(list![]),)),))),
+            ("g3".to_string(), None),
+            ("g4".to_string(), Some((Some((None,)),))),
+            ("g5".to_string(), Some((None,)))
+          ]),
+        )),
+      ),
+      (
+        Some(3),
+        Some(list![]),
+        Some(list![None]),
+        Some(map![]),
+        Some(list![None, None]),
+        Some((None, None, Some((Some(list![]),)), Some(map![]))),
+      ),
+      (
+        Some(4),
+        None,
+        Some(list![]),
+        Some(map![]),
+        Some(list![]),
+        Some((None, None, Some((None,)), None)),
+      ),
+      (
+        Some(5),
+        None,
+        None,
+        Some(map![]),
+        None,
+        Some((
+          None,
+          None,
+          None,
+          Some(map![(
+            "foo".to_string(),
+            Some((Some((Some(list![Some(2.2), Some(3.3)]),)),))
+          )]),
+        )),
+      ),
+      (Some(6), None, None, None, None, None),
+      (
+        Some(7),
+        None,
+        Some(list![None, Some(list![Some(5), Some(6)])]),
+        Some(map![("k1".to_string(), None), ("k3".to_string(), None)]),
+        None,
+        Some((
+          Some(7),
+          Some(list![Some(2), Some(3), None]),
+          Some((Some(list![Some(list![]), Some(list![None]), None]),)),
+          None,
+        )),
+      ),
+    ];
+
     assert_eq!(rows, expected_rows);
   }
 
@@ -1680,7 +1909,7 @@ mod tests {
   //     }
   //   ";
   //   let schema = parse_message_type(&schema).unwrap();
-  //   let rows = test_file_reader_rows("nested_maps.snappy.parquet",
+  //   let rows = test_file_reader_rows::<Row>("nested_maps.snappy.parquet",
   // Some(schema)).unwrap();   let expected_rows = vec![
   //     row![
   //       ("c".to_string(), Value::F64(1.0)),
@@ -1728,13 +1957,13 @@ mod tests {
   //     }
   //   ";
   //   let schema = parse_message_type(&schema).unwrap();
-  //   let rows = test_file_reader_rows("nested_maps.snappy.parquet",
+  //   let rows = test_file_reader_rows::<Row>("nested_maps.snappy.parquet",
   // Some(schema)).unwrap();   let expected_rows = vec![
   //     row![(
   //       "a".to_string(),
-  //       map![(
+  //       mapv![(
   //         Value::String("a".to_string()),
-  //         map![
+  //         mapv![
   //           (Value::I32(1), Value::Bool(true)),
   //           (Value::I32(2), Value::Bool(false))
   //         ]
@@ -1742,28 +1971,28 @@ mod tests {
   //     )],
   //     row![(
   //       "a".to_string(),
-  //       map![(
+  //       mapv![(
   //         Value::String("b".to_string()),
-  //         map![(Value::I32(1), Value::Bool(true))]
+  //         mapv![(Value::I32(1), Value::Bool(true))]
   //       )]
   //     )],
   //     row![(
   //       "a".to_string(),
-  //       map![(Value::String("c".to_string()), none![])]
+  //       mapv![(Value::String("c".to_string()), nonev![])]
   //     )],
-  //     row![("a".to_string(), map![(Value::String("d".to_string()), map![])])],
+  //     row![("a".to_string(), mapv![(Value::String("d".to_string()), mapv![])])],
   //     row![(
   //       "a".to_string(),
-  //       map![(
+  //       mapv![(
   //         Value::String("e".to_string()),
-  //         map![(Value::I32(1), Value::Bool(true))]
+  //         mapv![(Value::I32(1), Value::Bool(true))]
   //       )]
   //     )],
   //     row![(
   //       "a".to_string(),
-  //       map![(
+  //       mapv![(
   //         Value::String("f".to_string()),
-  //         map![
+  //         mapv![
   //           (Value::I32(3), Value::Bool(true)),
   //           (Value::I32(4), Value::Bool(false)),
   //           (Value::I32(5), Value::Bool(true))
@@ -1795,37 +2024,37 @@ mod tests {
   //   ";
   //   let schema = parse_message_type(&schema).unwrap();
   //   let rows =
-  //     test_file_reader_rows("nested_lists.snappy.parquet", Some(schema)).unwrap();
-  //   let expected_rows = vec![
+  //     test_file_reader_rows::<Row>("nested_lists.snappy.parquet",
+  // Some(schema)).unwrap();   let expected_rows = vec![
   //     row![(
   //       "a".to_string(),
-  //       list![
-  //         list![
-  //           list![Value::String("a".to_string()), Value::String("b".to_string())],
-  //           list![Value::String("c".to_string())]
+  //       listv![
+  //         listv![
+  //           listv![Value::String("a".to_string()), Value::String("b".to_string())],
+  //           listv![Value::String("c".to_string())]
   //         ],
-  //         list![none![], list![Value::String("d".to_string())]]
+  //         listv![nonev![], listv![Value::String("d".to_string())]]
   //       ]
   //     )],
   //     row![(
   //       "a".to_string(),
-  //       list![
-  //         list![
-  //           list![Value::String("a".to_string()), Value::String("b".to_string())],
-  //           list![Value::String("c".to_string()), Value::String("d".to_string())]
+  //       listv![
+  //         listv![
+  //           listv![Value::String("a".to_string()), Value::String("b".to_string())],
+  //           listv![Value::String("c".to_string()), Value::String("d".to_string())]
   //         ],
-  //         list![none![], list![Value::String("e".to_string())]]
+  //         listv![nonev![], listv![Value::String("e".to_string())]]
   //       ]
   //     )],
   //     row![(
   //       "a".to_string(),
-  //       list![
-  //         list![
-  //           list![Value::String("a".to_string()), Value::String("b".to_string())],
-  //           list![Value::String("c".to_string()), Value::String("d".to_string())],
-  //           list![Value::String("e".to_string())]
+  //       listv![
+  //         listv![
+  //           listv![Value::String("a".to_string()), Value::String("b".to_string())],
+  //           listv![Value::String("c".to_string()), Value::String("d".to_string())],
+  //           listv![Value::String("e".to_string())]
   //         ],
-  //         list![none![], list![Value::String("f".to_string())]]
+  //         listv![nonev![], listv![Value::String("f".to_string())]]
   //       ]
   //     )],
   //   ];
@@ -1841,7 +2070,7 @@ mod tests {
   //     }
   //   ";
   //   let schema = parse_message_type(&schema).unwrap();
-  //   let res = test_file_reader_rows("nested_maps.snappy.parquet", Some(schema));
+  //   let res = test_file_reader_rows::<Row>("nested_maps.snappy.parquet", Some(schema));
   //   assert!(res.is_err());
   //   assert_eq!(
   //     res.unwrap_err(),
@@ -1884,39 +2113,41 @@ mod tests {
   //     }
   //   ";
   //   let schema = parse_message_type(&schema).unwrap();
-  //   test_file_reader_rows("nested_maps.snappy.parquet", Some(schema)).unwrap();
+  //   test_file_reader_rows::<Row>("nested_maps.snappy.parquet", Some(schema)).unwrap();
   // }
 
   #[test]
   fn test_tree_reader_handle_repeated_fields_with_no_annotation() {
     // Array field `phoneNumbers` does not contain LIST annotation.
     // We parse it as struct with `phone` repeated field as array.
-    let rows = test_file_reader_rows("repeated_no_annotation.parquet", None).unwrap();
+    let rows =
+      test_file_reader_rows::<Row>("repeated_no_annotation.parquet", None).unwrap();
+
     let expected_rows = vec![
       row![
         ("id".to_string(), Value::I32(1)),
-        ("phoneNumbers".to_string(), none![])
+        ("phoneNumbers".to_string(), nonev![])
       ],
       row![
         ("id".to_string(), Value::I32(2)),
-        ("phoneNumbers".to_string(), none![])
+        ("phoneNumbers".to_string(), nonev![])
       ],
       row![
         ("id".to_string(), Value::I32(3)),
         (
           "phoneNumbers".to_string(),
-          some![group![("phone".to_string(), list![])]]
+          somev![groupv![("phone".to_string(), listv![])]]
         )
       ],
       row![
         ("id".to_string(), Value::I32(4)),
         (
           "phoneNumbers".to_string(),
-          some![group![(
+          somev![groupv![(
             "phone".to_string(),
-            list![group![
+            listv![groupv![
               ("number".to_string(), Value::I64(5555555555)),
-              ("kind".to_string(), none![])
+              ("kind".to_string(), nonev![])
             ]]
           )]]
         )
@@ -1925,11 +2156,14 @@ mod tests {
         ("id".to_string(), Value::I32(5)),
         (
           "phoneNumbers".to_string(),
-          some![group![(
+          somev![groupv![(
             "phone".to_string(),
-            list![group![
+            listv![groupv![
               ("number".to_string(), Value::I64(1111111111)),
-              ("kind".to_string(), some![Value::String("home".to_string())])
+              (
+                "kind".to_string(),
+                somev![Value::String("home".to_string())]
+              )
             ]]
           )]]
         )
@@ -1938,22 +2172,25 @@ mod tests {
         ("id".to_string(), Value::I32(6)),
         (
           "phoneNumbers".to_string(),
-          some![group![(
+          somev![groupv![(
             "phone".to_string(),
-            list![
-              group![
+            listv![
+              groupv![
                 ("number".to_string(), Value::I64(1111111111)),
-                ("kind".to_string(), some![Value::String("home".to_string())])
+                (
+                  "kind".to_string(),
+                  somev![Value::String("home".to_string())]
+                )
               ],
-              group![
+              groupv![
                 ("number".to_string(), Value::I64(2222222222)),
-                ("kind".to_string(), none![])
+                ("kind".to_string(), nonev![])
               ],
-              group![
+              groupv![
                 ("number".to_string(), Value::I64(3333333333)),
                 (
                   "kind".to_string(),
-                  some![Value::String("mobile".to_string())]
+                  somev![Value::String("mobile".to_string())]
                 )
               ]
             ]
@@ -1965,11 +2202,8 @@ mod tests {
     assert_eq!(rows, expected_rows);
   }
 
-  fn test_file_reader_rows(
-    file_name: &str,
-    schema: Option<Type>,
-  ) -> Result<Vec<crate::record::types::Row>>
-  {
+  fn test_file_reader_rows<T>(file_name: &str, schema: Option<Type>) -> Result<Vec<T>>
+  where Root<T>: Deserialize {
     let file = get_test_file(file_name);
     let file_reader: SerializedFileReader<_> = SerializedFileReader::new(file)?;
     let iter = file_reader.get_row_iter(schema)?;

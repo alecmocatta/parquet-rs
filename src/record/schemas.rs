@@ -51,7 +51,10 @@ impl ValueSchema {
     if let ValueSchema::Bool(ret) = self {
       Ok(ret)
     } else {
-      Err(ParquetError::General(String::from("")))
+      Err(ParquetError::General(format!(
+        "Cannot access {:?} as bool",
+        self
+      )))
     }
   }
 
@@ -67,7 +70,10 @@ impl ValueSchema {
     if let ValueSchema::U8(ret) = self {
       Ok(ret)
     } else {
-      Err(ParquetError::General(String::from("")))
+      Err(ParquetError::General(format!(
+        "Cannot access {:?} as u8",
+        self
+      )))
     }
   }
 
@@ -83,7 +89,10 @@ impl ValueSchema {
     if let ValueSchema::I8(ret) = self {
       Ok(ret)
     } else {
-      Err(ParquetError::General(String::from("")))
+      Err(ParquetError::General(format!(
+        "Cannot access {:?} as i8",
+        self
+      )))
     }
   }
 
@@ -99,7 +108,10 @@ impl ValueSchema {
     if let ValueSchema::U16(ret) = self {
       Ok(ret)
     } else {
-      Err(ParquetError::General(String::from("")))
+      Err(ParquetError::General(format!(
+        "Cannot access {:?} as u16",
+        self
+      )))
     }
   }
 
@@ -115,7 +127,10 @@ impl ValueSchema {
     if let ValueSchema::I16(ret) = self {
       Ok(ret)
     } else {
-      Err(ParquetError::General(String::from("")))
+      Err(ParquetError::General(format!(
+        "Cannot access {:?} as i16",
+        self
+      )))
     }
   }
 
@@ -131,7 +146,10 @@ impl ValueSchema {
     if let ValueSchema::U32(ret) = self {
       Ok(ret)
     } else {
-      Err(ParquetError::General(String::from("")))
+      Err(ParquetError::General(format!(
+        "Cannot access {:?} as u32",
+        self
+      )))
     }
   }
 
@@ -147,7 +165,10 @@ impl ValueSchema {
     if let ValueSchema::I32(ret) = self {
       Ok(ret)
     } else {
-      Err(ParquetError::General(String::from("")))
+      Err(ParquetError::General(format!(
+        "Cannot access {:?} as i32",
+        self
+      )))
     }
   }
 
@@ -163,7 +184,10 @@ impl ValueSchema {
     if let ValueSchema::U64(ret) = self {
       Ok(ret)
     } else {
-      Err(ParquetError::General(String::from("")))
+      Err(ParquetError::General(format!(
+        "Cannot access {:?} as u64",
+        self
+      )))
     }
   }
 
@@ -179,7 +203,10 @@ impl ValueSchema {
     if let ValueSchema::I64(ret) = self {
       Ok(ret)
     } else {
-      Err(ParquetError::General(String::from("")))
+      Err(ParquetError::General(format!(
+        "Cannot access {:?} as i64",
+        self
+      )))
     }
   }
 
@@ -195,7 +222,10 @@ impl ValueSchema {
     if let ValueSchema::F32(ret) = self {
       Ok(ret)
     } else {
-      Err(ParquetError::General(String::from("")))
+      Err(ParquetError::General(format!(
+        "Cannot access {:?} as f32",
+        self
+      )))
     }
   }
 
@@ -211,7 +241,10 @@ impl ValueSchema {
     if let ValueSchema::F64(ret) = self {
       Ok(ret)
     } else {
-      Err(ParquetError::General(String::from("")))
+      Err(ParquetError::General(format!(
+        "Cannot access {:?} as f64",
+        self
+      )))
     }
   }
 
@@ -227,7 +260,10 @@ impl ValueSchema {
     if let ValueSchema::Timestamp(ret) = self {
       Ok(ret)
     } else {
-      Err(ParquetError::General(String::from("")))
+      Err(ParquetError::General(format!(
+        "Cannot access {:?} as timestamp",
+        self
+      )))
     }
   }
 
@@ -243,7 +279,10 @@ impl ValueSchema {
     if let ValueSchema::Array(ret) = self {
       Ok(ret)
     } else {
-      Err(ParquetError::General(String::from("")))
+      Err(ParquetError::General(format!(
+        "Cannot access {:?} as array",
+        self
+      )))
     }
   }
 
@@ -259,7 +298,10 @@ impl ValueSchema {
     if let ValueSchema::String(ret) = self {
       Ok(ret)
     } else {
-      Err(ParquetError::General(String::from("")))
+      Err(ParquetError::General(format!(
+        "Cannot access {:?} as string",
+        self
+      )))
     }
   }
 
@@ -275,7 +317,10 @@ impl ValueSchema {
     if let ValueSchema::List(ret) = self {
       Ok(*ret)
     } else {
-      Err(ParquetError::General(String::from("")))
+      Err(ParquetError::General(format!(
+        "Cannot access {:?} as list",
+        self
+      )))
     }
   }
 
@@ -291,7 +336,10 @@ impl ValueSchema {
     if let ValueSchema::Map(ret) = self {
       Ok(*ret)
     } else {
-      Err(ParquetError::General(String::from("")))
+      Err(ParquetError::General(format!(
+        "Cannot access {:?} as map",
+        self
+      )))
     }
   }
 
@@ -307,7 +355,10 @@ impl ValueSchema {
     if let ValueSchema::Group(ret) = self {
       Ok(ret)
     } else {
-      Err(ParquetError::General(String::from("")))
+      Err(ParquetError::General(format!(
+        "Cannot access {:?} as group",
+        self
+      )))
     }
   }
 
@@ -323,7 +374,10 @@ impl ValueSchema {
     if let ValueSchema::Option(ret) = self {
       Ok(*ret)
     } else {
-      Err(ParquetError::General(String::from("")))
+      Err(ParquetError::General(format!(
+        "Cannot access {:?} as option",
+        self
+      )))
     }
   }
 }

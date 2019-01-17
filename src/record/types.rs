@@ -35,13 +35,19 @@ use std::{
   hash::{Hash, Hasher},
   marker::PhantomData,
   num::TryFromIntError,
+  ops::Index,
   rc::Rc,
+  slice::SliceIndex,
   str,
   string::FromUtf8Error,
 };
 
 /// Default batch size for a reader
 const DEFAULT_BATCH_SIZE: usize = 1024;
+
+pub trait Downcast<T> {
+  fn downcast(self) -> Result<T, ParquetError>;
+}
 
 #[derive(Clone, Hash, PartialEq, Eq, Debug)]
 pub struct Root<T>(pub T);
@@ -156,7 +162,10 @@ impl Value {
     if let Value::Bool(ret) = self {
       Ok(ret)
     } else {
-      Err(ParquetError::General(String::from("")))
+      Err(ParquetError::General(format!(
+        "Cannot access {:?} as bool",
+        self
+      )))
     }
   }
 
@@ -172,7 +181,10 @@ impl Value {
     if let Value::U8(ret) = self {
       Ok(ret)
     } else {
-      Err(ParquetError::General(String::from("")))
+      Err(ParquetError::General(format!(
+        "Cannot access {:?} as u8",
+        self
+      )))
     }
   }
 
@@ -188,7 +200,10 @@ impl Value {
     if let Value::I8(ret) = self {
       Ok(ret)
     } else {
-      Err(ParquetError::General(String::from("")))
+      Err(ParquetError::General(format!(
+        "Cannot access {:?} as i8",
+        self
+      )))
     }
   }
 
@@ -204,7 +219,10 @@ impl Value {
     if let Value::U16(ret) = self {
       Ok(ret)
     } else {
-      Err(ParquetError::General(String::from("")))
+      Err(ParquetError::General(format!(
+        "Cannot access {:?} as u16",
+        self
+      )))
     }
   }
 
@@ -220,7 +238,10 @@ impl Value {
     if let Value::I16(ret) = self {
       Ok(ret)
     } else {
-      Err(ParquetError::General(String::from("")))
+      Err(ParquetError::General(format!(
+        "Cannot access {:?} as i16",
+        self
+      )))
     }
   }
 
@@ -236,7 +257,10 @@ impl Value {
     if let Value::U32(ret) = self {
       Ok(ret)
     } else {
-      Err(ParquetError::General(String::from("")))
+      Err(ParquetError::General(format!(
+        "Cannot access {:?} as u32",
+        self
+      )))
     }
   }
 
@@ -252,7 +276,10 @@ impl Value {
     if let Value::I32(ret) = self {
       Ok(ret)
     } else {
-      Err(ParquetError::General(String::from("")))
+      Err(ParquetError::General(format!(
+        "Cannot access {:?} as i32",
+        self
+      )))
     }
   }
 
@@ -268,7 +295,10 @@ impl Value {
     if let Value::U64(ret) = self {
       Ok(ret)
     } else {
-      Err(ParquetError::General(String::from("")))
+      Err(ParquetError::General(format!(
+        "Cannot access {:?} as u64",
+        self
+      )))
     }
   }
 
@@ -284,7 +314,10 @@ impl Value {
     if let Value::I64(ret) = self {
       Ok(ret)
     } else {
-      Err(ParquetError::General(String::from("")))
+      Err(ParquetError::General(format!(
+        "Cannot access {:?} as i64",
+        self
+      )))
     }
   }
 
@@ -300,7 +333,10 @@ impl Value {
     if let Value::F32(ret) = self {
       Ok(ret)
     } else {
-      Err(ParquetError::General(String::from("")))
+      Err(ParquetError::General(format!(
+        "Cannot access {:?} as f32",
+        self
+      )))
     }
   }
 
@@ -316,7 +352,10 @@ impl Value {
     if let Value::F64(ret) = self {
       Ok(ret)
     } else {
-      Err(ParquetError::General(String::from("")))
+      Err(ParquetError::General(format!(
+        "Cannot access {:?} as f64",
+        self
+      )))
     }
   }
 
@@ -332,7 +371,10 @@ impl Value {
     if let Value::Timestamp(ret) = self {
       Ok(ret)
     } else {
-      Err(ParquetError::General(String::from("")))
+      Err(ParquetError::General(format!(
+        "Cannot access {:?} as timestamp",
+        self
+      )))
     }
   }
 
@@ -348,7 +390,10 @@ impl Value {
     if let Value::Array(ret) = self {
       Ok(ret)
     } else {
-      Err(ParquetError::General(String::from("")))
+      Err(ParquetError::General(format!(
+        "Cannot access {:?} as array",
+        self
+      )))
     }
   }
 
@@ -364,7 +409,10 @@ impl Value {
     if let Value::String(ret) = self {
       Ok(ret)
     } else {
-      Err(ParquetError::General(String::from("")))
+      Err(ParquetError::General(format!(
+        "Cannot access {:?} as string",
+        self
+      )))
     }
   }
 
@@ -380,7 +428,10 @@ impl Value {
     if let Value::List(ret) = self {
       Ok(ret)
     } else {
-      Err(ParquetError::General(String::from("")))
+      Err(ParquetError::General(format!(
+        "Cannot access {:?} as list",
+        self
+      )))
     }
   }
 
@@ -396,7 +447,10 @@ impl Value {
     if let Value::Map(ret) = self {
       Ok(ret)
     } else {
-      Err(ParquetError::General(String::from("")))
+      Err(ParquetError::General(format!(
+        "Cannot access {:?} as map",
+        self
+      )))
     }
   }
 
@@ -412,7 +466,10 @@ impl Value {
     if let Value::Group(ret) = self {
       Ok(ret)
     } else {
-      Err(ParquetError::General(String::from("")))
+      Err(ParquetError::General(format!(
+        "Cannot access {:?} as group",
+        self
+      )))
     }
   }
 
@@ -428,14 +485,14 @@ impl Value {
     if let Value::Option(ret) = self {
       Ok(*ret)
     } else {
-      Err(ParquetError::General(String::from("")))
+      Err(ParquetError::General(format!(
+        "Cannot access {:?} as option",
+        self
+      )))
     }
   }
 }
 
-pub trait Downcast<T> {
-  fn downcast(self) -> Result<T, ParquetError>;
-}
 impl Downcast<Value> for Value {
   fn downcast(self) -> Result<Value, ParquetError> { Ok(self) }
 }
@@ -603,87 +660,25 @@ impl Deserialize for Value {
           | (PhysicalType::FIXED_LEN_BYTE_ARRAY, LogicalType::INTERVAL) => {
             unimplemented!()
           },
-          _ => return Err(ParquetError::General(String::from("Value"))),
+          (physical_type, logical_type) => {
+            return Err(ParquetError::General(format!(
+              "Can't parse primitive ({:?}, {:?})",
+              physical_type, logical_type
+            )));
+          },
         },
       );
     }
     // https://github.com/apache/parquet-format/blob/master/LogicalTypes.md#backward-compatibility-rules
-    if value.is_none()
-      && schema.is_group()
-      && !schema.is_schema()
-      && schema.get_basic_info().logical_type() == LogicalType::LIST
-      && schema.get_fields().len() == 1
-    {
-      let sub_schema = schema.get_fields().into_iter().nth(0).unwrap();
-      if sub_schema.get_basic_info().repetition() == Repetition::REPEATED {
-        if sub_schema.is_group()
-          && sub_schema.get_fields().len() == 1
-          && sub_schema.name() != "array"
-          && sub_schema.name() != format!("{}_tuple", schema.name())
-        {
-          let element = sub_schema.get_fields().into_iter().nth(0).unwrap();
-          let list_name = if sub_schema.name() == "list" {
-            None
-          } else {
-            Some(sub_schema.name().to_owned())
-          };
-          let element_name = if element.name() == "element" {
-            None
-          } else {
-            Some(element.name().to_owned())
-          };
-          value = Some(ValueSchema::List(Box::new(ListSchema(
-            Value::parse(&*element)?.1,
-            ListSchemaType::List(list_name, element_name),
-          ))));
-        } else {
-          let element_name = sub_schema.name().to_owned();
-          value = Some(ValueSchema::List(Box::new(ListSchema(
-            Value::parse(&*sub_schema)?.1,
-            ListSchemaType::ListCompat(element_name),
-          ))));
-        }
-      }
-      // Err(ParquetError::General(String::from("List<T>")))
+    if value.is_none() && !schema.is_schema() {
+      value = parse_list::<Value>(schema)
+        .ok()
+        .map(|value| ValueSchema::List(Box::new(value)));
     }
-    if value.is_none()
-      && schema.is_group()
-      && !schema.is_schema()
-      && (schema.get_basic_info().logical_type() == LogicalType::MAP
-        || schema.get_basic_info().logical_type() == LogicalType::MAP_KEY_VALUE)
-      && schema.get_fields().len() == 1
-    {
-      let sub_schema = schema.get_fields().into_iter().nth(0).unwrap();
-      if sub_schema.is_group()
-        && !sub_schema.is_schema()
-        && sub_schema.get_basic_info().repetition() == Repetition::REPEATED
-        && sub_schema.get_fields().len() == 2
-      {
-        let mut fields = sub_schema.get_fields().into_iter();
-        let (key, value_) = (fields.next().unwrap(), fields.next().unwrap());
-        let key_value_name = if sub_schema.name() == "key_value" {
-          None
-        } else {
-          Some(sub_schema.name().to_owned())
-        };
-        let key_name = if key.name() == "key" {
-          None
-        } else {
-          Some(key.name().to_owned())
-        };
-        let value_name = if value_.name() == "value" {
-          None
-        } else {
-          Some(value_.name().to_owned())
-        };
-        value = Some(ValueSchema::Map(Box::new(MapSchema(
-          Value::parse(&*key)?.1,
-          Value::parse(&*value_)?.1,
-          key_value_name,
-          key_name,
-          value_name,
-        ))));
-      }
+    if value.is_none() && !schema.is_schema() {
+      value = parse_map::<Value, Value>(schema)
+        .ok()
+        .map(|value| ValueSchema::Map(Box::new(value)));
     }
 
     if value.is_none() && schema.is_group() && !schema.is_schema() {
@@ -704,12 +699,10 @@ impl Deserialize for Value {
       )));
     }
 
-    if value.is_none() {
-      println!("errrrr");
-      println!("{:?}", schema);
-    }
-
-    let mut value = value.ok_or(ParquetError::General(String::from("Value")))?;
+    let mut value = value.ok_or(ParquetError::General(format!(
+      "Can't parse group {:?}",
+      schema
+    )))?;
 
     match schema.get_basic_info().repetition() {
       Repetition::OPTIONAL => {
@@ -877,8 +870,8 @@ impl Deserialize for Value {
   }
 }
 
-#[derive(Clone, PartialEq, Debug)]
-pub struct Group(pub Vec<Value>, pub Rc<HashMap<String, usize>>);
+#[derive(Clone, PartialEq)]
+pub struct Group(pub(crate) Vec<Value>, pub(crate) Rc<HashMap<String, usize>>);
 pub type Row = Group;
 
 impl Deserialize for Group {
@@ -989,6 +982,107 @@ impl Deserialize for Root<Group> {
   }
 }
 
+impl Group {
+  pub fn get(&self, k: &str) -> Option<&Value> {
+    self.1.get(k).map(|&offset| &self.0[offset])
+  }
+}
+impl<I> Index<I> for Group
+where I: SliceIndex<[Value]>
+{
+  type Output = <I as SliceIndex<[Value]>>::Output;
+
+  fn index(&self, index: I) -> &Self::Output { self.0.index(index) }
+}
+impl Debug for Group {
+  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    let mut printer = f.debug_struct("Group");
+    let fields = self.0.iter();
+    let mut names = vec![None; self.1.len()];
+    for (name, &index) in self.1.iter() {
+      names[index].replace(name);
+    }
+    let names = names.into_iter().map(Option::unwrap);
+    for (name, field) in names.zip(fields) {
+      printer.field(name, field);
+    }
+    printer.finish()
+  }
+}
+impl From<HashMap<String, Value>> for Group {
+  fn from(hashmap: HashMap<String, Value>) -> Self {
+    let mut keys = HashMap::new();
+    Group(
+      hashmap
+        .into_iter()
+        .map(|(key, value)| {
+          keys.insert(key, keys.len());
+          value
+        })
+        .collect(),
+      Rc::new(keys),
+    )
+  }
+}
+impl Into<HashMap<String, Value>> for Group {
+  fn into(self) -> HashMap<String, Value> {
+    let fields = self.0.into_iter();
+    let mut names = vec![None; self.1.len()];
+    for (name, &index) in self.1.iter() {
+      names[index].replace(name.to_owned());
+    }
+    let names = names.into_iter().map(Option::unwrap);
+    names.zip(fields).collect()
+  }
+}
+
+// https://github.com/apache/parquet-format/blob/master/LogicalTypes.md#backward-compatibility-rules
+fn parse_list<T: Deserialize>(
+  schema: &Type,
+) -> Result<ListSchema<T::Schema>, ParquetError> {
+  if schema.is_group()
+    && schema.get_basic_info().logical_type() == LogicalType::LIST
+    && schema.get_fields().len() == 1
+  {
+    let sub_schema = schema.get_fields().into_iter().nth(0).unwrap();
+    if sub_schema.get_basic_info().repetition() == Repetition::REPEATED {
+      return Ok(
+        if sub_schema.is_group()
+          && sub_schema.get_fields().len() == 1
+          && sub_schema.name() != "array"
+          && sub_schema.name() != format!("{}_tuple", schema.name())
+        {
+          let element = sub_schema.get_fields().into_iter().nth(0).unwrap();
+          let list_name = if sub_schema.name() == "list" {
+            None
+          } else {
+            Some(sub_schema.name().to_owned())
+          };
+          let element_name = if element.name() == "element" {
+            None
+          } else {
+            Some(element.name().to_owned())
+          };
+
+          ListSchema(
+            T::parse(&*element)?.1,
+            ListSchemaType::List(list_name, element_name),
+          )
+        } else {
+          let element_name = sub_schema.name().to_owned();
+          ListSchema(
+            T::parse(&*sub_schema)?.1,
+            ListSchemaType::ListCompat(element_name),
+          )
+        },
+      );
+    }
+  }
+  Err(ParquetError::General(String::from(
+    "Couldn't parse List<T>",
+  )))
+}
+
 #[derive(Clone, Hash, PartialEq, Eq, Debug)]
 pub struct List<T>(pub(super) Vec<T>);
 
@@ -1007,46 +1101,9 @@ where T: Deserialize
     // a))),    _ => Err(ParquetError::General(String::from(""))),
     //  }
     // })
-    if schema.is_group()
-      && !schema.is_schema()
-      && schema.get_basic_info().repetition() == Repetition::REQUIRED
-      && schema.get_basic_info().logical_type() == LogicalType::LIST
-      && schema.get_fields().len() == 1
+    if !schema.is_schema() && schema.get_basic_info().repetition() == Repetition::REQUIRED
     {
-      let sub_schema = schema.get_fields().into_iter().nth(0).unwrap();
-      if sub_schema.get_basic_info().repetition() == Repetition::REPEATED {
-        return Ok((
-          schema.name().to_owned(),
-          if sub_schema.is_group()
-            && sub_schema.get_fields().len() == 1
-            && sub_schema.name() != "array"
-            && sub_schema.name() != format!("{}_tuple", schema.name())
-          {
-            let element = sub_schema.get_fields().into_iter().nth(0).unwrap();
-            let list_name = if sub_schema.name() == "list" {
-              None
-            } else {
-              Some(sub_schema.name().to_owned())
-            };
-            let element_name = if element.name() == "element" {
-              None
-            } else {
-              Some(element.name().to_owned())
-            };
-
-            ListSchema(
-              T::parse(&*element)?.1,
-              ListSchemaType::List(list_name, element_name),
-            )
-          } else {
-            let element_name = sub_schema.name().to_owned();
-            ListSchema(
-              T::parse(&*sub_schema)?.1,
-              ListSchemaType::ListCompat(element_name),
-            )
-          },
-        ));
-      }
+      return parse_list::<T>(schema).map(|schema2| (schema.name().to_owned(), schema2));
     }
     if schema.get_basic_info().repetition() == Repetition::REPEATED {
       let mut schema2: Type = schema.clone();
@@ -1064,8 +1121,9 @@ where T: Deserialize
         ListSchema(T::parse(&schema2)?.1, ListSchemaType::Repeated),
       ));
     }
-    // https://github.com/apache/parquet-format/blob/master/LogicalTypes.md#backward-compatibility-rules
-    Err(ParquetError::General(String::from("List<T>")))
+    Err(ParquetError::General(String::from(
+      "Couldn't parse List<T>",
+    )))
   }
 
   fn reader(
@@ -1137,6 +1195,66 @@ where T: Deserialize
   }
 }
 
+impl<T> From<Vec<T>> for List<T> {
+  fn from(vec: Vec<T>) -> Self { List(vec) }
+}
+impl<T> Into<Vec<T>> for List<T> {
+  fn into(self) -> Vec<T> { self.0 }
+}
+impl<T, I> Index<I> for List<T>
+where I: SliceIndex<[T]>
+{
+  type Output = <I as SliceIndex<[T]>>::Output;
+
+  fn index(&self, index: I) -> &Self::Output { self.0.index(index) }
+}
+
+// https://github.com/apache/parquet-format/blob/master/LogicalTypes.md#backward-compatibility-rules
+fn parse_map<K: Deserialize, V: Deserialize>(
+  schema: &Type,
+) -> Result<MapSchema<K::Schema, V::Schema>, ParquetError> {
+  if schema.is_group()
+    && (schema.get_basic_info().logical_type() == LogicalType::MAP
+      || schema.get_basic_info().logical_type() == LogicalType::MAP_KEY_VALUE)
+    && schema.get_fields().len() == 1
+  {
+    let sub_schema = schema.get_fields().into_iter().nth(0).unwrap();
+    if sub_schema.is_group()
+      && !sub_schema.is_schema()
+      && sub_schema.get_basic_info().repetition() == Repetition::REPEATED
+      && sub_schema.get_fields().len() == 2
+    {
+      let mut fields = sub_schema.get_fields().into_iter();
+      let (key, value_) = (fields.next().unwrap(), fields.next().unwrap());
+      let key_value_name = if sub_schema.name() == "key_value" {
+        None
+      } else {
+        Some(sub_schema.name().to_owned())
+      };
+      let key_name = if key.name() == "key" {
+        None
+      } else {
+        Some(key.name().to_owned())
+      };
+      let value_name = if value_.name() == "value" {
+        None
+      } else {
+        Some(value_.name().to_owned())
+      };
+      return Ok(MapSchema(
+        K::parse(&*key)?.1,
+        V::parse(&*value_)?.1,
+        key_value_name,
+        key_name,
+        value_name,
+      ));
+    }
+  }
+  Err(ParquetError::General(String::from(
+    "Couldn't parse Map<K,V>",
+  )))
+}
+
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Map<K: Hash + Eq, V>(pub(super) HashMap<K, V>);
 
@@ -1153,49 +1271,13 @@ where
   type Schema = MapSchema<K::Schema, V::Schema>;
 
   fn parse(schema: &Type) -> Result<(String, Self::Schema), ParquetError> {
-    if schema.is_group()
-      && !schema.is_schema()
-      && schema.get_basic_info().repetition() == Repetition::REQUIRED
-      && (schema.get_basic_info().logical_type() == LogicalType::MAP
-        || schema.get_basic_info().logical_type() == LogicalType::MAP_KEY_VALUE)
-      && schema.get_fields().len() == 1
+    if !schema.is_schema() && schema.get_basic_info().repetition() == Repetition::REQUIRED
     {
-      let sub_schema = schema.get_fields().into_iter().nth(0).unwrap();
-      if sub_schema.is_group()
-        && !sub_schema.is_schema()
-        && sub_schema.get_basic_info().repetition() == Repetition::REPEATED
-        && sub_schema.get_fields().len() == 2
-      {
-        let mut fields = sub_schema.get_fields().into_iter();
-        let (key, value) = (fields.next().unwrap(), fields.next().unwrap());
-        let key_value_name = if sub_schema.name() == "key_value" {
-          None
-        } else {
-          Some(sub_schema.name().to_owned())
-        };
-        let key_name = if key.name() == "key" {
-          None
-        } else {
-          Some(key.name().to_owned())
-        };
-        let value_name = if value.name() == "value" {
-          None
-        } else {
-          Some(value.name().to_owned())
-        };
-        return Ok((
-          schema.name().to_owned(),
-          MapSchema(
-            K::parse(&*key)?.1,
-            V::parse(&*value)?.1,
-            key_value_name,
-            key_name,
-            value_name,
-          ),
-        ));
-      }
+      return parse_map::<K, V>(schema).map(|schema2| (schema.name().to_owned(), schema2));
     }
-    Err(ParquetError::General(String::from("Map<K,V>")))
+    Err(ParquetError::General(String::from(
+      "Couldn't parse Map<K,V>",
+    )))
   }
 
   fn reader(
@@ -1243,18 +1325,46 @@ where
   }
 }
 
+impl<K, V> From<HashMap<K, V>> for Map<K, V>
+where K: Hash + Eq
+{
+  fn from(hashmap: HashMap<K, V>) -> Self { Map(hashmap) }
+}
+impl<K, V> Into<HashMap<K, V>> for Map<K, V>
+where K: Hash + Eq
+{
+  fn into(self) -> HashMap<K, V> { self.0 }
+}
+
 impl<T> Deserialize for Option<T>
-where
-  T: Deserialize,
-  ValueSchema: Downcast<<T as Deserialize>::Schema>,
+where T: Deserialize
 {
   type Reader = OptionReader<T::Reader>;
   type Schema = OptionSchema<T::Schema>;
 
   fn parse(schema: &Type) -> Result<(String, Self::Schema), ParquetError> {
-    <Value as Deserialize>::parse(schema).and_then(|(name, schema)| {
-      Ok((name, OptionSchema(schema.as_option()?.0.downcast()?)))
-    })
+    // <Value as Deserialize>::parse(schema).and_then(|(name, schema)| {
+    //   Ok((name, OptionSchema(schema.as_option()?.0.downcast()?)))
+    // })
+    if schema.get_basic_info().repetition() == Repetition::OPTIONAL {
+      let mut schema2: Type = schema.clone();
+      let basic_info = match schema2 {
+        Type::PrimitiveType {
+          ref mut basic_info, ..
+        } => basic_info,
+        Type::GroupType {
+          ref mut basic_info, ..
+        } => basic_info,
+      };
+      basic_info.set_repetition(Some(Repetition::REQUIRED));
+      return Ok((
+        schema.name().to_owned(),
+        OptionSchema(T::parse(&schema2)?.1),
+      ));
+    }
+    Err(ParquetError::General(String::from(
+      "Couldn't parse Option<T>",
+    )))
   }
 
   fn reader(
