@@ -929,7 +929,7 @@ mod tests {
 
   #[test]
   fn test_plain_decode_int96() {
-    let mut data = vec![
+    let data = vec![
       Int96::new(11, 22, 33),
       Int96::new(44, 55, 66),
       Int96::new(10, 20, 30),

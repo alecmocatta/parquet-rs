@@ -912,7 +912,7 @@ mod tests {
 
     for subset in &data {
       let mut row_group_writer = file_writer.next_row_group().unwrap();
-      let mut col_writer = row_group_writer.next_column().unwrap();
+      let col_writer = row_group_writer.next_column().unwrap();
       if let Some(mut writer) = col_writer {
         match writer {
           ColumnWriter::Int32ColumnWriter(ref mut typed) => {
