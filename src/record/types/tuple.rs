@@ -4,7 +4,7 @@ use errors::ParquetError;
 use record::{
   reader::{Reader, RootReader, TupleReader},
   schemas::{RootSchema, TupleSchema, ValueSchema},
-  types::{Downcast, Root, Value},
+  types::{group::Group, Downcast, Root, Value},
   Deserialize, DisplayType,
 };
 use schema::types::{ColumnDescPtr, ColumnPath, Type};
@@ -129,6 +129,13 @@ macro_rules! impl_parquet_deserialize_tuple {
       fn downcast(self) -> Result<($($t,)*),ParquetError> {
         #[allow(unused_mut,unused_variables)]
         let mut fields = self.as_group()?.0.into_iter();
+        Ok(($({$i;fields.next().unwrap().downcast()?},)*))
+      }
+    }
+    impl<$($t,)*> Downcast<($($t,)*)> for Group where Value: $(Downcast<$t> +)* {
+      fn downcast(self) -> Result<($($t,)*),ParquetError> {
+        #[allow(unused_mut,unused_variables)]
+        let mut fields = self.0.into_iter();
         Ok(($({$i;fields.next().unwrap().downcast()?},)*))
       }
     }
