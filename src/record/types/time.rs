@@ -1,3 +1,5 @@
+use std::{collections::HashMap, convert::TryInto, error::Error, num::TryFromIntError};
+
 use column::reader::ColumnReader;
 use data_type::{Int64Type, Int96, Int96Type};
 use errors::ParquetError;
@@ -5,11 +7,10 @@ use record::{
   reader::{I64Reader, I96Reader, MapReader},
   schemas::TimestampSchema,
   triplet::TypedTripletIter,
-  types::{downcast, Value, DEFAULT_BATCH_SIZE},
+  types::{downcast, Value},
   Deserialize,
 };
 use schema::types::{ColumnDescPtr, ColumnPath, Type};
-use std::{collections::HashMap, convert::TryInto, error::Error, num::TryFromIntError};
 
 const JULIAN_DAY_OF_EPOCH: i64 = 2_440_588;
 const SECONDS_PER_DAY: i64 = 86_400;
@@ -67,6 +68,7 @@ impl Deserialize for Timestamp {
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
+    batch_size: usize,
   ) -> Self::Reader
   {
     let col_path = ColumnPath::new(path.to_vec());
@@ -81,7 +83,7 @@ impl Deserialize for Timestamp {
           column: TypedTripletIter::<Int96Type>::new(
             curr_def_level,
             curr_rep_level,
-            DEFAULT_BATCH_SIZE,
+            batch_size,
             col_reader,
           ),
         },
@@ -92,7 +94,7 @@ impl Deserialize for Timestamp {
           column: TypedTripletIter::<Int64Type>::new(
             curr_def_level,
             curr_rep_level,
-            DEFAULT_BATCH_SIZE,
+            batch_size,
             col_reader,
           ),
         },
@@ -119,7 +121,7 @@ impl Deserialize for Timestamp {
           column: TypedTripletIter::<Int64Type>::new(
             curr_def_level,
             curr_rep_level,
-            DEFAULT_BATCH_SIZE,
+            batch_size,
             col_reader,
           ),
         },

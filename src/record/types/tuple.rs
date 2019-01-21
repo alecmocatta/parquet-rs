@@ -1,3 +1,10 @@
+use std::{
+  collections::HashMap,
+  fmt::{self, Debug, Display},
+  marker::PhantomData,
+  vec,
+};
+
 use basic::Repetition;
 use column::reader::ColumnReader;
 use errors::ParquetError;
@@ -8,12 +15,6 @@ use record::{
   Deserialize, DisplayType,
 };
 use schema::types::{ColumnDescPtr, ColumnPath, Type};
-use std::{
-  collections::HashMap,
-  fmt::{self, Debug, Display},
-  marker::PhantomData,
-  vec,
-};
 
 macro_rules! impl_parquet_deserialize_tuple {
   ($($t:ident $i:tt)*) => (
@@ -25,8 +26,9 @@ macro_rules! impl_parquet_deserialize_tuple {
           $((self.0).$i.read()?,)*
         ))
       }
-      fn advance_columns(&mut self) {
-        $((self.0).$i.advance_columns();)*
+      fn advance_columns(&mut self) -> Result<(), ParquetError> {
+        $((self.0).$i.advance_columns()?;)*
+        Ok(())
       }
       fn has_next(&self) -> bool {
         // $((self.0).$i.has_next() &&)* true
@@ -96,8 +98,8 @@ macro_rules! impl_parquet_deserialize_tuple {
         }
         Err(ParquetError::General(format!("Can't parse Tuple {:?}", schema)))
       }
-      fn reader(schema: &Self::Schema, path: &mut Vec<String>, curr_def_level: i16, curr_rep_level: i16, paths: &mut HashMap<ColumnPath, (ColumnDescPtr,ColumnReader)>) -> Self::Reader {
-        RootReader(<($($t,)*) as Deserialize>::reader(&schema.1, path, curr_def_level, curr_rep_level, paths))
+      fn reader(schema: &Self::Schema, path: &mut Vec<String>, curr_def_level: i16, curr_rep_level: i16, paths: &mut HashMap<ColumnPath, (ColumnDescPtr,ColumnReader)>, batch_size: usize) -> Self::Reader {
+        RootReader(<($($t,)*) as Deserialize>::reader(&schema.1, path, curr_def_level, curr_rep_level, paths, batch_size))
       }
     }
     impl<$($t,)*> Deserialize for ($($t,)*) where $($t: Deserialize,)* {
@@ -115,11 +117,11 @@ macro_rules! impl_parquet_deserialize_tuple {
         Err(ParquetError::General(format!("Can't parse Tuple {:?}", schema)))
       }
       #[allow(unused_variables)]
-      fn reader(schema: &Self::Schema, path: &mut Vec<String>, curr_def_level: i16, curr_rep_level: i16, paths: &mut HashMap<ColumnPath, (ColumnDescPtr,ColumnReader)>) -> Self::Reader {
+      fn reader(schema: &Self::Schema, path: &mut Vec<String>, curr_def_level: i16, curr_rep_level: i16, paths: &mut HashMap<ColumnPath, (ColumnDescPtr,ColumnReader)>, batch_size: usize) -> Self::Reader {
         $(
           path.push((schema.0).$i.0.to_owned());
           #[allow(non_snake_case)]
-          let $t = <$t as Deserialize>::reader(&(schema.0).$i.1, path, curr_def_level, curr_rep_level, paths);
+          let $t = <$t as Deserialize>::reader(&(schema.0).$i.1, path, curr_def_level, curr_rep_level, paths, batch_size);
           path.pop().unwrap();
         )*;
         TupleReader(($($t,)*))
@@ -150,7 +152,7 @@ macro_rules! impl_parquet_deserialize_tuple {
         }
         #[allow(unused_mut,unused_variables)]
         let mut names = names.into_iter().map(Option::unwrap);
-        Ok(TupleSchema(($({$i;(names.next().unwrap(),fields.next().unwrap().downcast()?)},)*)))
+        Ok(TupleSchema(($({let _ = $i;(names.next().unwrap(),fields.next().unwrap().downcast()?)},)*)))
       }
     }
   );

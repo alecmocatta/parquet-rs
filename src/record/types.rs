@@ -1,6 +1,3 @@
-use super::schemas::ValueSchema;
-use crate::errors::ParquetError;
-
 mod array;
 mod decimal;
 mod group;
@@ -12,13 +9,13 @@ mod time;
 mod tuple;
 mod value;
 
+use super::schemas::ValueSchema;
+use errors::ParquetError;
+
 pub use self::{
   array::*, decimal::*, group::*, list::*, map::*, numbers::*, option::*, time::*,
   tuple::*, value::*,
 };
-
-/// Default batch size for a reader
-const DEFAULT_BATCH_SIZE: usize = 1024;
 
 pub trait Downcast<T> {
   fn downcast(self) -> Result<T, ParquetError>;

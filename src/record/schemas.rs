@@ -1,13 +1,254 @@
-use super::{types::Downcast, DisplayDisplayType, DisplayType};
-use crate::errors::ParquetError;
-use record::{types::Root, Deserialize};
-use schema::parser::parse_message_type;
 use std::{
   collections::HashMap,
   fmt::{self, Debug, Display},
   marker::PhantomData,
   str::FromStr,
 };
+
+use super::{
+  types::{Downcast, Root},
+  Deserialize, DisplayDisplayType, DisplayType,
+};
+use errors::ParquetError;
+use schema::parser::parse_message_type;
+
+#[derive(Debug)]
+pub struct BoolSchema;
+impl Display for BoolSchema {
+  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    f.write_str("BoolSchema")
+  }
+}
+impl DisplayType for BoolSchema {
+  fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> { f.write_str("BoolSchema") }
+}
+#[derive(Debug)]
+pub struct U8Schema;
+impl Display for U8Schema {
+  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    f.write_str("U8Schema")
+  }
+}
+impl DisplayType for U8Schema {
+  fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> { f.write_str("U8Schema") }
+}
+#[derive(Debug)]
+pub struct I8Schema;
+impl Display for I8Schema {
+  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    f.write_str("I8Schema")
+  }
+}
+impl DisplayType for I8Schema {
+  fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> { f.write_str("I8Schema") }
+}
+#[derive(Debug)]
+pub struct U16Schema;
+impl Display for U16Schema {
+  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    f.write_str("U16Schema")
+  }
+}
+impl DisplayType for U16Schema {
+  fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> { f.write_str("U16Schema") }
+}
+#[derive(Debug)]
+pub struct I16Schema;
+impl Display for I16Schema {
+  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    f.write_str("I16Schema")
+  }
+}
+impl DisplayType for I16Schema {
+  fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> { f.write_str("I16Schema") }
+}
+#[derive(Debug)]
+pub struct U32Schema;
+impl Display for U32Schema {
+  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    f.write_str("U32Schema")
+  }
+}
+impl DisplayType for U32Schema {
+  fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> { f.write_str("U32Schema") }
+}
+#[derive(Debug)]
+pub struct I32Schema;
+impl Display for I32Schema {
+  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    f.write_str("I32Schema")
+  }
+}
+impl DisplayType for I32Schema {
+  fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> { f.write_str("I32Schema") }
+}
+#[derive(Debug)]
+pub struct U64Schema;
+impl Display for U64Schema {
+  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    f.write_str("U64Schema")
+  }
+}
+impl DisplayType for U64Schema {
+  fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> { f.write_str("U64Schema") }
+}
+#[derive(Debug)]
+pub struct I64Schema;
+impl Display for I64Schema {
+  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    f.write_str("I64Schema")
+  }
+}
+impl DisplayType for I64Schema {
+  fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> { f.write_str("I64Schema") }
+}
+#[derive(Debug)]
+pub struct F64Schema;
+impl Display for F64Schema {
+  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    f.write_str("F64Schema")
+  }
+}
+impl DisplayType for F64Schema {
+  fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> { f.write_str("F64Schema") }
+}
+#[derive(Debug)]
+pub struct F32Schema;
+impl Display for F32Schema {
+  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    f.write_str("F32Schema")
+  }
+}
+impl DisplayType for F32Schema {
+  fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> { f.write_str("F32Schema") }
+}
+#[derive(Debug)]
+pub struct StringSchema;
+impl Display for StringSchema {
+  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    f.write_str("StringSchema")
+  }
+}
+impl DisplayType for StringSchema {
+  fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> { f.write_str("StringSchema") }
+}
+#[derive(Debug)]
+pub enum TimestampSchema {
+  Int96,
+  Millis,
+  Micros,
+}
+impl Display for TimestampSchema {
+  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    f.write_str("TimestampSchema")
+  }
+}
+impl DisplayType for TimestampSchema {
+  fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    f.write_str("TimestampSchema")
+  }
+}
+
+#[derive(Debug)]
+pub struct VecSchema(pub(super) Option<u32>);
+impl Display for VecSchema {
+  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    f.write_str("VecSchema")
+  }
+}
+impl DisplayType for VecSchema {
+  fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> { f.write_str("VecSchema") }
+}
+
+pub struct ArraySchema<T>(pub(super) PhantomData<fn(T)>);
+impl<T> Debug for ArraySchema<T> {
+  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    f.debug_tuple("ArraySchema").finish()
+  }
+}
+impl<T> Display for ArraySchema<T> {
+  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    f.write_str("ArraySchema<T>")
+  }
+}
+impl<T> DisplayType for ArraySchema<T> {
+  fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    f.write_str("ArraySchema<T>")
+  }
+}
+
+#[derive(Debug)]
+pub struct MapSchema<K, V>(
+  pub(super) K,
+  pub(super) V,
+  pub(super) Option<String>,
+  pub(super) Option<String>,
+  pub(super) Option<String>,
+);
+impl<K, V> Display for MapSchema<K, V>
+where
+  K: Display,
+  V: Display,
+{
+  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    f.write_str("MapSchema")
+  }
+}
+impl<K, V> DisplayType for MapSchema<K, V>
+where
+  K: DisplayType,
+  V: DisplayType,
+{
+  fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> { f.write_str("MapSchema") }
+}
+#[derive(Debug)]
+pub struct OptionSchema<T>(pub(super) T);
+impl<T> Display for OptionSchema<T>
+where T: Display
+{
+  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    f.write_str("OptionSchema")
+  }
+}
+impl<T> DisplayType for OptionSchema<T>
+where T: DisplayType
+{
+  fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> { f.write_str("OptionSchema") }
+}
+#[derive(Debug)]
+pub struct ListSchema<T>(pub(super) T, pub(super) ListSchemaType);
+#[derive(Debug)]
+pub(super) enum ListSchemaType {
+  List(Option<String>, Option<String>),
+  ListCompat(String),
+  Repeated,
+}
+impl<T> Display for ListSchema<T>
+where T: Display
+{
+  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    f.write_str("ListSchema")
+  }
+}
+impl<T> DisplayType for ListSchema<T>
+where T: DisplayType
+{
+  fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> { f.write_str("ListSchema") }
+}
+
+#[derive(Debug)]
+pub struct GroupSchema(
+  pub(super) Vec<ValueSchema>,
+  pub(super) HashMap<String, usize>,
+);
+impl Display for GroupSchema {
+  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    f.write_str("GroupSchema")
+  }
+}
+impl DisplayType for GroupSchema {
+  fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> { f.write_str("GroupSchema") }
+}
 
 #[derive(Debug)]
 pub enum ValueSchema {
@@ -474,20 +715,6 @@ impl Downcast<OptionSchema<ValueSchema>> for ValueSchema {
   }
 }
 
-#[derive(Debug)]
-pub struct GroupSchema(
-  pub(super) Vec<ValueSchema>,
-  pub(super) HashMap<String, usize>,
-);
-impl Display for GroupSchema {
-  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-    f.write_str("GroupSchema")
-  }
-}
-impl DisplayType for GroupSchema {
-  fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> { f.write_str("GroupSchema") }
-}
-
 pub struct RootSchema<T, S>(pub String, pub S, pub PhantomData<fn(T)>);
 impl<T, S> Debug for RootSchema<T, S>
 where S: Debug
@@ -553,227 +780,4 @@ where
   }
 }
 
-#[derive(Debug)]
-pub struct VecSchema(pub(super) Option<u32>);
-impl Display for VecSchema {
-  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-    f.write_str("VecSchema")
-  }
-}
-impl DisplayType for VecSchema {
-  fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> { f.write_str("VecSchema") }
-}
-
-pub struct ArraySchema<T>(pub(super) PhantomData<fn(T)>);
-impl<T> Debug for ArraySchema<T> {
-  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-    f.debug_tuple("ArraySchema").finish()
-  }
-}
-impl<T> Display for ArraySchema<T> {
-  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-    f.write_str("ArraySchema<T>")
-  }
-}
-impl<T> DisplayType for ArraySchema<T> {
-  fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-    f.write_str("ArraySchema<T>")
-  }
-}
-
 pub struct TupleSchema<T>(pub(super) T);
-
-#[derive(Debug)]
-pub struct MapSchema<K, V>(
-  pub(super) K,
-  pub(super) V,
-  pub(super) Option<String>,
-  pub(super) Option<String>,
-  pub(super) Option<String>,
-);
-impl<K, V> Display for MapSchema<K, V>
-where
-  K: Display,
-  V: Display,
-{
-  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-    f.write_str("MapSchema")
-  }
-}
-impl<K, V> DisplayType for MapSchema<K, V>
-where
-  K: DisplayType,
-  V: DisplayType,
-{
-  fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> { f.write_str("MapSchema") }
-}
-#[derive(Debug)]
-pub struct OptionSchema<T>(pub(super) T);
-impl<T> Display for OptionSchema<T>
-where T: Display
-{
-  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-    f.write_str("OptionSchema")
-  }
-}
-impl<T> DisplayType for OptionSchema<T>
-where T: DisplayType
-{
-  fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> { f.write_str("OptionSchema") }
-}
-#[derive(Debug)]
-pub struct ListSchema<T>(pub(super) T, pub(super) ListSchemaType);
-#[derive(Debug)]
-pub(super) enum ListSchemaType {
-  List(Option<String>, Option<String>),
-  ListCompat(String),
-  Repeated,
-}
-impl<T> Display for ListSchema<T>
-where T: Display
-{
-  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-    f.write_str("ListSchema")
-  }
-}
-impl<T> DisplayType for ListSchema<T>
-where T: DisplayType
-{
-  fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> { f.write_str("ListSchema") }
-}
-#[derive(Debug)]
-pub struct BoolSchema;
-impl Display for BoolSchema {
-  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-    f.write_str("BoolSchema")
-  }
-}
-impl DisplayType for BoolSchema {
-  fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> { f.write_str("BoolSchema") }
-}
-#[derive(Debug)]
-pub struct U8Schema;
-impl Display for U8Schema {
-  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-    f.write_str("U8Schema")
-  }
-}
-impl DisplayType for U8Schema {
-  fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> { f.write_str("U8Schema") }
-}
-#[derive(Debug)]
-pub struct I8Schema;
-impl Display for I8Schema {
-  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-    f.write_str("I8Schema")
-  }
-}
-impl DisplayType for I8Schema {
-  fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> { f.write_str("I8Schema") }
-}
-#[derive(Debug)]
-pub struct U16Schema;
-impl Display for U16Schema {
-  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-    f.write_str("U16Schema")
-  }
-}
-impl DisplayType for U16Schema {
-  fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> { f.write_str("U16Schema") }
-}
-#[derive(Debug)]
-pub struct I16Schema;
-impl Display for I16Schema {
-  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-    f.write_str("I16Schema")
-  }
-}
-impl DisplayType for I16Schema {
-  fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> { f.write_str("I16Schema") }
-}
-#[derive(Debug)]
-pub struct U32Schema;
-impl Display for U32Schema {
-  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-    f.write_str("U32Schema")
-  }
-}
-impl DisplayType for U32Schema {
-  fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> { f.write_str("U32Schema") }
-}
-#[derive(Debug)]
-pub struct I32Schema;
-impl Display for I32Schema {
-  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-    f.write_str("I32Schema")
-  }
-}
-impl DisplayType for I32Schema {
-  fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> { f.write_str("I32Schema") }
-}
-#[derive(Debug)]
-pub struct U64Schema;
-impl Display for U64Schema {
-  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-    f.write_str("U64Schema")
-  }
-}
-impl DisplayType for U64Schema {
-  fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> { f.write_str("U64Schema") }
-}
-#[derive(Debug)]
-pub struct I64Schema;
-impl Display for I64Schema {
-  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-    f.write_str("I64Schema")
-  }
-}
-impl DisplayType for I64Schema {
-  fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> { f.write_str("I64Schema") }
-}
-#[derive(Debug)]
-pub struct F64Schema;
-impl Display for F64Schema {
-  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-    f.write_str("F64Schema")
-  }
-}
-impl DisplayType for F64Schema {
-  fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> { f.write_str("F64Schema") }
-}
-#[derive(Debug)]
-pub struct F32Schema;
-impl Display for F32Schema {
-  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-    f.write_str("F32Schema")
-  }
-}
-impl DisplayType for F32Schema {
-  fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> { f.write_str("F32Schema") }
-}
-#[derive(Debug)]
-pub struct StringSchema;
-impl Display for StringSchema {
-  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-    f.write_str("StringSchema")
-  }
-}
-impl DisplayType for StringSchema {
-  fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> { f.write_str("StringSchema") }
-}
-#[derive(Debug)]
-pub enum TimestampSchema {
-  Int96,
-  Millis,
-  Micros,
-}
-impl Display for TimestampSchema {
-  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-    f.write_str("TimestampSchema")
-  }
-}
-impl DisplayType for TimestampSchema {
-  fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-    f.write_str("TimestampSchema")
-  }
-}

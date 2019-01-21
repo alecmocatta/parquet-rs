@@ -15,8 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use file::reader::ParquetReader;
 use std::{cmp, fs::File, io::*, sync::Mutex};
+
+use file::reader::ParquetReader;
 
 // ----------------------------------------------------------------------
 // Read/Write wrappers for `File`.

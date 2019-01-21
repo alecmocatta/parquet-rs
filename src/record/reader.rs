@@ -18,7 +18,12 @@
 //! Contains implementation of record assembly and converting Parquet types into
 //! [`Row`](`::record::api::Row`)s.
 
+use std::{
+  collections::HashMap, convert::TryInto, error::Error, marker::PhantomData, rc::Rc,
+};
+
 use super::{
+  triplet::TypedTripletIter,
   types::{Group, List, Map, Root, Timestamp, Value},
   Deserialize, DisplayDisplayType,
 };
@@ -29,364 +34,19 @@ use data_type::{
 };
 use errors::{ParquetError, Result};
 use file::reader::{FileReader, RowGroupReader};
-use record::triplet::TypedTripletIter;
 use schema::types::{ColumnDescPtr, ColumnPath, SchemaDescPtr, SchemaDescriptor, Type};
-use std::{
-  collections::HashMap, convert::TryInto, error::Error, marker::PhantomData, rc::Rc,
-};
 
-// /// Tree builder for `Reader` enum.
-// /// Serves as a container of options for building a reader tree and a builder, and
-// /// accessing a records iterator [`RowIter`].
-// pub struct TreeBuilder {
-//   // Batch size (>= 1) for triplet iterators
-//   batch_size: usize,
-// }
+/// Default batch size for a reader
+const DEFAULT_BATCH_SIZE: usize = 1024;
 
-// impl TreeBuilder {
-//   /// Creates new tree builder with default parameters.
-//   pub fn new() -> Self {
-//     Self {
-//       batch_size: DEFAULT_BATCH_SIZE,
-//     }
-//   }
-
-//   /// Sets batch size for this tree builder.
-//   pub fn with_batch_size(mut self, batch_size: usize) -> Self {
-//     self.batch_size = batch_size;
-//     self
-//   }
-
-//   /// Creates new root reader for provided schema and row group.
-//   pub fn build(&self, descr: SchemaDescPtr, row_group_reader: &RowGroupReader) ->
-// Reader {     // Prepare lookup table of column path -> original column index
-//     // This allows to prune columns and map schema leaf nodes to the column readers
-//     let mut paths: HashMap<ColumnPath, usize> = HashMap::new();
-//     let row_group_metadata = row_group_reader.metadata();
-
-//     for col_index in 0..row_group_reader.num_columns() {
-//       let col_meta = row_group_metadata.column(col_index);
-//       let col_path = col_meta.column_path().clone();
-//       println!("path: {:?}", col_path);
-//       paths.insert(col_path, col_index);
-//     }
-
-//     // Build child readers for the message type
-//     let mut readers = Vec::new();
-//     let mut path = Vec::new();
-
-//     for field in descr.root_schema().get_fields() {
-//       let reader =
-//         self.reader_tree(field.clone(), &mut path, 0, 0, &paths, row_group_reader);
-//       readers.push(reader);
-//     }
-
-//     // Return group reader for message type,
-//     // it is always required with definition level 0
-//     Reader::GroupReader(GroupReader{def_level: 0, readers})
-//   }
-
-//   /// Creates iterator of `Row`s directly from schema descriptor and row group.
-//   pub fn as_iter(
-//     &self,
-//     descr: SchemaDescPtr,
-//     row_group_reader: &RowGroupReader,
-//   ) -> ReaderIter
-//   {
-//     let num_records = row_group_reader.metadata().num_rows() as usize;
-//     ReaderIter::new(self.build(descr, row_group_reader), num_records)
-//   }
-
-//   /// Builds tree of readers for the current schema recursively.
-//   fn reader_tree(
-//     &self,
-//     field: TypePtr,
-//     mut path: &mut Vec<String>,
-//     mut curr_def_level: i16,
-//     mut curr_rep_level: i16,
-//     paths: &HashMap<ColumnPath, usize>,
-//     row_group_reader: &RowGroupReader,
-//   ) -> Reader
-//   {
-//     assert!(field.get_basic_info().has_repetition());
-//     // Update current definition and repetition levels for this type
-//     let repetition = field.get_basic_info().repetition();
-//     match repetition {
-//       Repetition::OPTIONAL => {
-//         curr_def_level += 1;
-//       },
-//       Repetition::REPEATED => {
-//         curr_def_level += 1;
-//         curr_rep_level += 1;
-//       },
-//       _ => {},
-//     }
-
-//     path.push(String::from(field.name()));
-//     let reader = if field.is_primitive() {
-//       let col_path = ColumnPath::new(path.to_vec());
-//       let orig_index = *paths.get(&col_path).unwrap();
-//       let col_descr = row_group_reader
-//         .metadata()
-//         .column(orig_index)
-//         .column_descr_ptr();
-//       let col_reader = row_group_reader.get_column_reader(orig_index).unwrap();
-//       let (max_def_level, max_rep_level) = (col_descr.max_def_level(),
-// col_descr.max_rep_level());       match col_descr.physical_type() {
-//         PhysicalType::BOOLEAN => {
-//           Reader::BoolReader(BoolReader{column:
-// TypedTripletIter::<BoolType>::new(max_def_level, max_rep_level, self.batch_size,
-// col_reader)})         },
-//         PhysicalType::INT32 => {
-//           Reader::I32Reader(I32Reader{column:
-// TypedTripletIter::<Int32Type>::new(max_def_level, max_rep_level, self.batch_size,
-// col_reader)})         },
-//         PhysicalType::INT64 => {
-//           Reader::I64Reader(I64Reader{column:
-// TypedTripletIter::<Int64Type>::new(max_def_level, max_rep_level, self.batch_size,
-// col_reader)})         },
-//         PhysicalType::INT96 => {
-//           Reader::I96Reader(I96Reader{column:
-// TypedTripletIter::<Int96Type>::new(max_def_level, max_rep_level, self.batch_size,
-// col_reader)})         },
-//         PhysicalType::FLOAT => {
-//           Reader::F32Reader(F32Reader{column:
-// TypedTripletIter::<FloatType>::new(max_def_level, max_rep_level, self.batch_size,
-// col_reader)})         },
-//         PhysicalType::DOUBLE => {
-//           Reader::F64Reader(F64Reader{column:
-// TypedTripletIter::<DoubleType>::new(max_def_level, max_rep_level, self.batch_size,
-// col_reader)})         },
-//         PhysicalType::BYTE_ARRAY => Reader::ByteArrayReader(ByteArrayReader{column:
-// TypedTripletIter::<ByteArrayType>::new(max_def_level, max_rep_level, self.batch_size,
-// col_reader)}),         PhysicalType::FIXED_LEN_BYTE_ARRAY =>
-// Reader::FixedLenByteArrayReader(FixedLenByteArrayReader{column:
-// TypedTripletIter::<FixedLenByteArrayType>::new(max_def_level, max_rep_level,
-// self.batch_size, col_reader)}),       }
-//     } else {
-//       match field.get_basic_info().logical_type() {
-//         // List types
-//         LogicalType::LIST => {
-//           assert_eq!(field.get_fields().len(), 1, "Invalid list type {:?}", field);
-
-//           let repeated_field = field.get_fields()[0].clone();
-//           assert_eq!(
-//             repeated_field.get_basic_info().repetition(),
-//             Repetition::REPEATED,
-//             "Invalid list type {:?}",
-//             field
-//           );
-
-//           if Self::is_element_type(&repeated_field) {
-//             // Support for backward compatible lists
-//             let reader = self.reader_tree(
-//               repeated_field.clone(),
-//               &mut path,
-//               curr_def_level,
-//               curr_rep_level,
-//               paths,
-//               row_group_reader,
-//             );
-
-//             Reader::RepeatedReader(
-//               RepeatedReader{
-//                 def_level: curr_def_level,
-//                 rep_level: curr_rep_level,
-//                 reader: Box::new(reader),
-//               }
-//             )
-//           } else {
-//             let child_field = repeated_field.get_fields()[0].clone();
-
-//             path.push(String::from(repeated_field.name()));
-
-//             let reader = self.reader_tree(
-//               child_field,
-//               &mut path,
-//               curr_def_level + 1,
-//               curr_rep_level + 1,
-//               paths,
-//               row_group_reader,
-//             );
-
-//             path.pop();
-
-//             Reader::RepeatedReader(
-//               RepeatedReader{
-//                 def_level: curr_def_level,
-//                 rep_level: curr_rep_level,
-//                 reader: Box::new(reader),
-//               }
-//             )
-//           }
-//         },
-//         // Map types (key-value pairs)
-//         LogicalType::MAP | LogicalType::MAP_KEY_VALUE => {
-//           assert_eq!(field.get_fields().len(), 1, "Invalid map type: {:?}", field);
-//           assert!(
-//             !field.get_fields()[0].is_primitive(),
-//             "Invalid map type: {:?}",
-//             field
-//           );
-
-//           let key_value_type = field.get_fields()[0].clone();
-//           assert_eq!(
-//             key_value_type.get_basic_info().repetition(),
-//             Repetition::REPEATED,
-//             "Invalid map type: {:?}",
-//             field
-//           );
-//           assert_eq!(
-//             key_value_type.get_fields().len(),
-//             2,
-//             "Invalid map type: {:?}",
-//             field
-//           );
-
-//           path.push(String::from(key_value_type.name()));
-
-//           let key_type = &key_value_type.get_fields()[0];
-//           assert!(
-//             key_type.is_primitive(),
-//             "Map key type is expected to be a primitive type, but found {:?}",
-//             key_type
-//           );
-//           let key_reader = self.reader_tree(
-//             key_type.clone(),
-//             &mut path,
-//             curr_def_level + 1,
-//             curr_rep_level + 1,
-//             paths,
-//             row_group_reader,
-//           );
-
-//           let value_type = &key_value_type.get_fields()[1];
-//           let value_reader = self.reader_tree(
-//             value_type.clone(),
-//             &mut path,
-//             curr_def_level + 1,
-//             curr_rep_level + 1,
-//             paths,
-//             row_group_reader,
-//           );
-
-//           path.pop();
-
-//           Reader::KeyValueReader(
-//             KeyValueReader{
-//               def_level: curr_def_level,
-//               rep_level: curr_rep_level,
-//               keys_reader: Box::new(key_reader),
-//               values_reader: Box::new(value_reader),
-//             }
-//           )
-//         },
-//         // A repeated field that is neither contained by a `LIST`- or `MAP`-annotated
-//         // group nor annotated by `LIST` or `MAP` should be interpreted as a required
-//         // list of required elements where the element type is the type of the field.
-//         _ if repetition == Repetition::REPEATED => {
-//           let required_field = Type::group_type_builder(field.name())
-//             .with_repetition(Repetition::REQUIRED)
-//             .with_logical_type(field.get_basic_info().logical_type())
-//             .with_fields(&mut Vec::from(field.get_fields()))
-//             .build()
-//             .unwrap();
-
-//           path.pop();
-
-//           let reader = self.reader_tree(
-//             Rc::new(required_field),
-//             &mut path,
-//             curr_def_level,
-//             curr_rep_level,
-//             paths,
-//             row_group_reader,
-//           );
-
-//           Reader::RepeatedReader(
-//             RepeatedReader{
-//               def_level: curr_def_level - 1,
-//               rep_level: curr_rep_level - 1,
-//               reader: Box::new(reader),
-//             }
-//           )
-//         },
-//         // Group types (structs)
-//         _ => {
-//           let mut readers = Vec::new();
-//           for child in field.get_fields() {
-//             let reader = self.reader_tree(
-//               child.clone(),
-//               &mut path,
-//               curr_def_level,
-//               curr_rep_level,
-//               paths,
-//               row_group_reader,
-//             );
-//             readers.push(reader);
-//           }
-//           Reader::GroupReader(GroupReader{def_level: curr_def_level, readers})
-//         },
-//       }
-//     };
-//     path.pop();
-
-//     if repetition == Repetition::OPTIONAL {
-//       Reader::OptionReader(OptionReader{def_level: curr_def_level - 1, reader:
-// Box::new(reader)})     } else {
-//       reader
-//     }
-//   }
-
-//   /// Returns true if repeated type is an element type for the list.
-//   /// Used to determine legacy list types.
-//   /// This method is copied from Spark Parquet reader and is based on the reference:
-//   /// https://github.com/apache/parquet-format/blob/master/LogicalTypes.md
-//   ///   #backward-compatibility-rules
-//   fn is_element_type(repeated_type: &Type) -> bool {
-//     // For legacy 2-level list types with primitive element type, e.g.:
-//     //
-//     //    // ARRAY<INT> (nullable list, non-null elements)
-//     //    optional group my_list (LIST) {
-//     //      repeated int32 element;
-//     //    }
-//     //
-//     repeated_type.is_primitive() ||
-//     // For legacy 2-level list types whose element type is a group type with 2 or more
-//     // fields, e.g.:
-//     //
-//     //    // ARRAY<STRUCT<str: STRING, num: INT>> (nullable list, non-null elements)
-//     //    optional group my_list (LIST) {
-//     //      repeated group element {
-//     //        required binary str (UTF8);
-//     //        required int32 num;
-//     //      };
-//     //    }
-//     //
-//     repeated_type.is_group() && repeated_type.get_fields().len() > 1 ||
-//     // For legacy 2-level list types generated by parquet-avro (Parquet version <
-// 1.6.0),     // e.g.:
-//     //
-//     //    // ARRAY<STRUCT<str: STRING>> (nullable list, non-null elements)
-//     //    optional group my_list (LIST) {
-//     //      repeated group array {
-//     //        required binary str (UTF8);
-//     //      };
-//     //    }
-//     //
-//     repeated_type.name() == "array" ||
-//     // For Parquet data generated by parquet-thrift, e.g.:
-//     //
-//     //    // ARRAY<STRUCT<str: STRING>> (nullable list, non-null elements)
-//     //    optional group my_list (LIST) {
-//     //      repeated group my_list_tuple {
-//     //        required binary str (UTF8);
-//     //      };
-//     //    }
-//     //
-//     repeated_type.name().ends_with("_tuple")
-//   }
-// }
+pub trait Reader {
+  type Item;
+  fn read(&mut self) -> Result<Self::Item>;
+  fn advance_columns(&mut self) -> Result<()>;
+  fn has_next(&self) -> bool;
+  fn current_def_level(&self) -> i16;
+  fn current_rep_level(&self) -> i16;
+}
 
 impl<A, B, C> Reader for sum::Sum3<A, B, C>
 where
@@ -404,7 +64,7 @@ where
     }
   }
 
-  fn advance_columns(&mut self) {
+  fn advance_columns(&mut self) -> Result<()> {
     match self {
       sum::Sum3::A(ref mut reader) => reader.advance_columns(),
       sum::Sum3::B(ref mut reader) => reader.advance_columns(),
@@ -440,110 +100,80 @@ where
 pub struct BoolReader {
   pub(super) column: TypedTripletIter<BoolType>,
 }
-pub struct I32Reader {
-  pub(super) column: TypedTripletIter<Int32Type>,
-}
-pub struct I64Reader {
-  pub(super) column: TypedTripletIter<Int64Type>,
-}
-pub struct I96Reader {
-  pub(super) column: TypedTripletIter<Int96Type>,
-}
-pub struct F32Reader {
-  pub(super) column: TypedTripletIter<FloatType>,
-}
-pub struct F64Reader {
-  pub(super) column: TypedTripletIter<DoubleType>,
-}
-pub struct ByteArrayReader {
-  pub(super) column: TypedTripletIter<ByteArrayType>,
-}
-pub struct FixedLenByteArrayReader {
-  pub(super) column: TypedTripletIter<FixedLenByteArrayType>,
-}
-pub struct OptionReader<R> {
-  pub(super) def_level: i16,
-  pub(super) reader: R,
-}
-pub struct RepeatedReader<R> {
-  pub(super) def_level: i16,
-  pub(super) rep_level: i16,
-  pub(super) reader: R,
-}
-pub struct KeyValueReader<K, V> {
-  pub(super) def_level: i16,
-  pub(super) rep_level: i16,
-  pub(super) keys_reader: K,
-  pub(super) values_reader: V,
-}
-
-pub trait Reader {
-  type Item;
-  fn read(&mut self) -> Result<Self::Item>;
-  fn advance_columns(&mut self);
-  fn has_next(&self) -> bool;
-  fn current_def_level(&self) -> i16;
-  fn current_rep_level(&self) -> i16;
-}
-
 impl Reader for BoolReader {
   type Item = bool;
 
   fn read(&mut self) -> Result<Self::Item> { self.column.read() }
 
-  fn advance_columns(&mut self) { self.column.advance_columns().unwrap(); }
+  fn advance_columns(&mut self) -> Result<()> { self.column.advance_columns() }
 
   fn has_next(&self) -> bool { self.column.has_next() }
 
   fn current_def_level(&self) -> i16 { self.column.current_def_level() }
 
   fn current_rep_level(&self) -> i16 { self.column.current_rep_level() }
+}
+
+pub struct I32Reader {
+  pub(super) column: TypedTripletIter<Int32Type>,
 }
 impl Reader for I32Reader {
   type Item = i32;
 
   fn read(&mut self) -> Result<Self::Item> { self.column.read() }
 
-  fn advance_columns(&mut self) { self.column.advance_columns().unwrap(); }
+  fn advance_columns(&mut self) -> Result<()> { self.column.advance_columns() }
 
   fn has_next(&self) -> bool { self.column.has_next() }
 
   fn current_def_level(&self) -> i16 { self.column.current_def_level() }
 
   fn current_rep_level(&self) -> i16 { self.column.current_rep_level() }
+}
+
+pub struct I64Reader {
+  pub(super) column: TypedTripletIter<Int64Type>,
 }
 impl Reader for I64Reader {
   type Item = i64;
 
   fn read(&mut self) -> Result<Self::Item> { self.column.read() }
 
-  fn advance_columns(&mut self) { self.column.advance_columns().unwrap(); }
+  fn advance_columns(&mut self) -> Result<()> { self.column.advance_columns() }
 
   fn has_next(&self) -> bool { self.column.has_next() }
 
   fn current_def_level(&self) -> i16 { self.column.current_def_level() }
 
   fn current_rep_level(&self) -> i16 { self.column.current_rep_level() }
+}
+
+pub struct I96Reader {
+  pub(super) column: TypedTripletIter<Int96Type>,
 }
 impl Reader for I96Reader {
   type Item = Int96;
 
   fn read(&mut self) -> Result<Self::Item> { self.column.read() }
 
-  fn advance_columns(&mut self) { self.column.advance_columns().unwrap(); }
+  fn advance_columns(&mut self) -> Result<()> { self.column.advance_columns() }
 
   fn has_next(&self) -> bool { self.column.has_next() }
 
   fn current_def_level(&self) -> i16 { self.column.current_def_level() }
 
   fn current_rep_level(&self) -> i16 { self.column.current_rep_level() }
+}
+
+pub struct F32Reader {
+  pub(super) column: TypedTripletIter<FloatType>,
 }
 impl Reader for F32Reader {
   type Item = f32;
 
   fn read(&mut self) -> Result<Self::Item> { self.column.read() }
 
-  fn advance_columns(&mut self) { self.column.advance_columns().unwrap(); }
+  fn advance_columns(&mut self) -> Result<()> { self.column.advance_columns() }
 
   fn has_next(&self) -> bool { self.column.has_next() }
 
@@ -551,18 +181,26 @@ impl Reader for F32Reader {
 
   fn current_rep_level(&self) -> i16 { self.column.current_rep_level() }
 }
+
+pub struct F64Reader {
+  pub(super) column: TypedTripletIter<DoubleType>,
+}
 impl Reader for F64Reader {
   type Item = f64;
 
   fn read(&mut self) -> Result<Self::Item> { self.column.read() }
 
-  fn advance_columns(&mut self) { self.column.advance_columns().unwrap(); }
+  fn advance_columns(&mut self) -> Result<()> { self.column.advance_columns() }
 
   fn has_next(&self) -> bool { self.column.has_next() }
 
   fn current_def_level(&self) -> i16 { self.column.current_def_level() }
 
   fn current_rep_level(&self) -> i16 { self.column.current_rep_level() }
+}
+
+pub struct ByteArrayReader {
+  pub(super) column: TypedTripletIter<ByteArrayType>,
 }
 impl Reader for ByteArrayReader {
   type Item = Vec<u8>;
@@ -571,13 +209,17 @@ impl Reader for ByteArrayReader {
     self.column.read().map(|data| data.data().to_owned())
   }
 
-  fn advance_columns(&mut self) { self.column.advance_columns().unwrap(); }
+  fn advance_columns(&mut self) -> Result<()> { self.column.advance_columns() }
 
   fn has_next(&self) -> bool { self.column.has_next() }
 
   fn current_def_level(&self) -> i16 { self.column.current_def_level() }
 
   fn current_rep_level(&self) -> i16 { self.column.current_rep_level() }
+}
+
+pub struct FixedLenByteArrayReader {
+  pub(super) column: TypedTripletIter<FixedLenByteArrayType>,
 }
 impl Reader for FixedLenByteArrayReader {
   type Item = Vec<u8>;
@@ -586,13 +228,18 @@ impl Reader for FixedLenByteArrayReader {
     self.column.read().map(|data| data.data().to_owned())
   }
 
-  fn advance_columns(&mut self) { self.column.advance_columns().unwrap(); }
+  fn advance_columns(&mut self) -> Result<()> { self.column.advance_columns() }
 
   fn has_next(&self) -> bool { self.column.has_next() }
 
   fn current_def_level(&self) -> i16 { self.column.current_def_level() }
 
   fn current_rep_level(&self) -> i16 { self.column.current_rep_level() }
+}
+
+pub struct OptionReader<R> {
+  pub(super) def_level: i16,
+  pub(super) reader: R,
 }
 impl<R: Reader> Reader for OptionReader<R> {
   type Item = Option<R::Item>;
@@ -601,12 +248,11 @@ impl<R: Reader> Reader for OptionReader<R> {
     if self.reader.current_def_level() > self.def_level {
       self.reader.read().map(Some)
     } else {
-      self.reader.advance_columns();
-      Ok(None)
+      self.reader.advance_columns().map(|()| None)
     }
   }
 
-  fn advance_columns(&mut self) { self.reader.advance_columns(); }
+  fn advance_columns(&mut self) -> Result<()> { self.reader.advance_columns() }
 
   fn has_next(&self) -> bool { self.reader.has_next() }
 
@@ -615,6 +261,11 @@ impl<R: Reader> Reader for OptionReader<R> {
   fn current_rep_level(&self) -> i16 { self.reader.current_rep_level() }
 }
 
+pub struct RepeatedReader<R> {
+  pub(super) def_level: i16,
+  pub(super) rep_level: i16,
+  pub(super) reader: R,
+}
 impl<R: Reader> Reader for RepeatedReader<R> {
   type Item = Vec<R::Item>;
 
@@ -624,7 +275,7 @@ impl<R: Reader> Reader for RepeatedReader<R> {
       if self.reader.current_def_level() > self.def_level {
         elements.push(self.reader.read()?);
       } else {
-        self.reader.advance_columns();
+        self.reader.advance_columns()?;
         // If the current definition level is equal to the definition level of this
         // repeated type, then the result is an empty list and the repetition level
         // will always be <= rl.
@@ -640,7 +291,7 @@ impl<R: Reader> Reader for RepeatedReader<R> {
     Ok(elements)
   }
 
-  fn advance_columns(&mut self) { self.reader.advance_columns(); }
+  fn advance_columns(&mut self) -> Result<()> { self.reader.advance_columns() }
 
   fn has_next(&self) -> bool { self.reader.has_next() }
 
@@ -649,6 +300,12 @@ impl<R: Reader> Reader for RepeatedReader<R> {
   fn current_rep_level(&self) -> i16 { self.reader.current_rep_level() }
 }
 
+pub struct KeyValueReader<K, V> {
+  pub(super) def_level: i16,
+  pub(super) rep_level: i16,
+  pub(super) keys_reader: K,
+  pub(super) values_reader: V,
+}
 impl<K: Reader, V: Reader> Reader for KeyValueReader<K, V> {
   type Item = Vec<(K::Item, V::Item)>;
 
@@ -658,8 +315,8 @@ impl<K: Reader, V: Reader> Reader for KeyValueReader<K, V> {
       if self.keys_reader.current_def_level() > self.def_level {
         pairs.push((self.keys_reader.read()?, self.values_reader.read()?));
       } else {
-        self.keys_reader.advance_columns();
-        self.values_reader.advance_columns();
+        self.keys_reader.advance_columns()?;
+        self.values_reader.advance_columns()?;
         // If the current definition level is equal to the definition level of this
         // repeated type, then the result is an empty list and the repetition level
         // will always be <= rl.
@@ -678,9 +335,9 @@ impl<K: Reader, V: Reader> Reader for KeyValueReader<K, V> {
     Ok(pairs)
   }
 
-  fn advance_columns(&mut self) {
-    self.keys_reader.advance_columns();
-    self.values_reader.advance_columns();
+  fn advance_columns(&mut self) -> Result<()> {
+    self.keys_reader.advance_columns()?;
+    self.values_reader.advance_columns()
   }
 
   fn has_next(&self) -> bool { self.keys_reader.has_next() }
@@ -706,13 +363,19 @@ impl Reader for GroupReader {
     Ok(Group(fields, self.fields.clone()))
   }
 
-  fn advance_columns(&mut self) {
+  fn advance_columns(&mut self) -> Result<()> {
     for reader in self.readers.iter_mut() {
-      reader.advance_columns();
+      reader.advance_columns()?;
     }
+    Ok(())
   }
 
-  fn has_next(&self) -> bool { self.readers.first().unwrap().has_next() }
+  fn has_next(&self) -> bool {
+    match self.readers.first() {
+      Some(reader) => reader.has_next(),
+      None => true,
+    }
+  }
 
   fn current_def_level(&self) -> i16 {
     match self.readers.first() {
@@ -777,7 +440,7 @@ impl Reader for ValueReader {
     }
   }
 
-  fn advance_columns(&mut self) {
+  fn advance_columns(&mut self) -> Result<()> {
     match self {
       ValueReader::Bool(ref mut reader) => reader.advance_columns(),
       ValueReader::U8(ref mut reader) => reader.advance_columns(),
@@ -870,6 +533,23 @@ impl Reader for ValueReader {
   }
 }
 
+pub struct RootReader<R>(pub R);
+impl<R> Reader for RootReader<R>
+where R: Reader
+{
+  type Item = Root<R::Item>;
+
+  fn read(&mut self) -> Result<Self::Item> { self.0.read().map(Root) }
+
+  fn advance_columns(&mut self) -> Result<()> { self.0.advance_columns() }
+
+  fn has_next(&self) -> bool { self.0.has_next() }
+
+  fn current_def_level(&self) -> i16 { self.0.current_def_level() }
+
+  fn current_rep_level(&self) -> i16 { self.0.current_rep_level() }
+}
+
 pub struct TupleReader<T>(pub(super) T);
 
 pub struct TryIntoReader<R: Reader, T>(pub(super) R, pub(super) PhantomData<fn(T)>);
@@ -887,7 +567,7 @@ where
     })
   }
 
-  fn advance_columns(&mut self) { self.0.advance_columns() }
+  fn advance_columns(&mut self) -> Result<()> { self.0.advance_columns() }
 
   fn has_next(&self) -> bool { self.0.has_next() }
 
@@ -904,24 +584,7 @@ where F: FnMut(R::Item) -> Result<T>
 
   fn read(&mut self) -> Result<Self::Item> { self.0.read().and_then(&mut self.1) }
 
-  fn advance_columns(&mut self) { self.0.advance_columns() }
-
-  fn has_next(&self) -> bool { self.0.has_next() }
-
-  fn current_def_level(&self) -> i16 { self.0.current_def_level() }
-
-  fn current_rep_level(&self) -> i16 { self.0.current_rep_level() }
-}
-
-pub struct RootReader<R>(pub R);
-impl<R> Reader for RootReader<R>
-where R: Reader
-{
-  type Item = Root<R::Item>;
-
-  fn read(&mut self) -> Result<Self::Item> { self.0.read().map(Root) }
-
-  fn advance_columns(&mut self) { self.0.advance_columns(); }
+  fn advance_columns(&mut self) -> Result<()> { self.0.advance_columns() }
 
   fn has_next(&self) -> bool { self.0.has_next() }
 
@@ -933,7 +596,10 @@ where R: Reader
 // ----------------------------------------------------------------------
 // Row iterators
 
-/// Iterator of [`Row`](`::record::api::Row`)s.
+/// Iterator of rows. [`Row`](`super::types::Row`) can be used to read as untyped rows. A
+/// tuple or a struct marked with `#[derive(ParquetDeserialize)]` can be used to read as
+/// typed rows.
+///
 /// It is used either for a single row group to iterate over data in that row group, or
 /// an entire file with auto buffering of all row groups.
 pub struct RowIter<'a, R, T>
@@ -954,7 +620,7 @@ where
   R: FileReader,
   Root<T>: Deserialize,
 {
-  /// Creates iterator of [`Row`](`::record::api::Row`)s for all row groups in a file.
+  /// Creates row iterator for all row groups in a file.
   pub fn from_file(proj: Option<Type>, reader: &'a R) -> Result<Self> {
     let descr =
       Self::get_proj_descr(proj, reader.metadata().file_metadata().schema_descr_ptr())?;
@@ -990,7 +656,7 @@ where
     })
   }
 
-  /// Creates iterator of [`Row`](`::record::api::Row`)s for a specific row group.
+  /// Creates row iterator for a specific row group.
   pub fn from_row_group(
     proj: Option<Type>,
     row_group_reader: &'a RowGroupReader,
@@ -1019,9 +685,10 @@ where
       })?
       .1;
 
+    // Prepare lookup table of column path -> original column index
+    // This allows to prune columns and map schema leaf nodes to the column readers
     let mut paths: HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)> = HashMap::new();
     let row_group_metadata = row_group_reader.metadata();
-
     for col_index in 0..row_group_reader.num_columns() {
       let col_meta = row_group_metadata.column(col_index);
       let col_path = col_meta.column_path().clone();
@@ -1036,8 +703,10 @@ where
       assert!(x.is_none());
     }
 
+    // Build reader for the message type, requires definition level 0
     let mut path = Vec::new();
-    let reader = <Root<T>>::reader(&schema, &mut path, 0, 0, &mut paths);
+    let reader =
+      <Root<T>>::reader(&schema, &mut path, 0, 0, &mut paths, DEFAULT_BATCH_SIZE);
     let row_iter = ReaderIter::new(reader, row_group_reader.metadata().num_rows() as u64);
 
     // For row group we need to set `current_row_group` >= `num_row_groups`, because we
@@ -1116,7 +785,14 @@ where
       }
 
       let mut path = Vec::new();
-      let reader = <Root<T>>::reader(&self.schema, &mut path, 0, 0, &mut paths);
+      let reader = <Root<T>>::reader(
+        &self.schema,
+        &mut path,
+        0,
+        0,
+        &mut paths,
+        DEFAULT_BATCH_SIZE,
+      );
       let mut row_iter =
         ReaderIter::new(reader, row_group_reader.metadata().num_rows() as u64);
 
@@ -1128,7 +804,7 @@ where
   }
 }
 
-/// Internal iterator of [`Row`](`::record::api::Row`)s for a reader.
+/// Internal row iterator for a reader.
 struct ReaderIter<T>
 where Root<T>: Deserialize {
   root_reader: <Root<T> as Deserialize>::Reader,
@@ -1141,7 +817,7 @@ where Root<T>: Deserialize
 {
   fn new(mut root_reader: <Root<T> as Deserialize>::Reader, num_records: u64) -> Self {
     // Prepare root reader by advancing all column vectors
-    root_reader.advance_columns();
+    root_reader.advance_columns().unwrap();
     Self {
       root_reader,
       records_left: num_records,

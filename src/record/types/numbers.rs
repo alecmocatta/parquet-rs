@@ -1,3 +1,5 @@
+use std::{collections::HashMap, marker::PhantomData};
+
 use column::reader::ColumnReader;
 use data_type::{BoolType, DoubleType, FloatType, Int32Type, Int64Type};
 use errors::ParquetError;
@@ -10,11 +12,10 @@ use record::{
     U16Schema, U32Schema, U64Schema, U8Schema,
   },
   triplet::TypedTripletIter,
-  types::{downcast, Value, DEFAULT_BATCH_SIZE},
+  types::{downcast, Value},
   Deserialize,
 };
 use schema::types::{ColumnDescPtr, ColumnPath, Type};
-use std::{collections::HashMap, marker::PhantomData};
 
 impl Deserialize for bool {
   type Reader = BoolReader;
@@ -30,6 +31,7 @@ impl Deserialize for bool {
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
+    batch_size: usize,
   ) -> Self::Reader
   {
     let col_path = ColumnPath::new(path.to_vec());
@@ -42,7 +44,7 @@ impl Deserialize for bool {
       column: TypedTripletIter::<BoolType>::new(
         curr_def_level,
         curr_rep_level,
-        DEFAULT_BATCH_SIZE,
+        batch_size,
         col_reader,
       ),
     }
@@ -63,6 +65,7 @@ impl Deserialize for i8 {
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
+    batch_size: usize,
   ) -> Self::Reader
   {
     let col_path = ColumnPath::new(path.to_vec());
@@ -76,7 +79,7 @@ impl Deserialize for i8 {
         column: TypedTripletIter::<Int32Type>::new(
           curr_def_level,
           curr_rep_level,
-          DEFAULT_BATCH_SIZE,
+          batch_size,
           col_reader,
         ),
       },
@@ -98,6 +101,7 @@ impl Deserialize for u8 {
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
+    batch_size: usize,
   ) -> Self::Reader
   {
     let col_path = ColumnPath::new(path.to_vec());
@@ -111,7 +115,7 @@ impl Deserialize for u8 {
         column: TypedTripletIter::<Int32Type>::new(
           curr_def_level,
           curr_rep_level,
-          DEFAULT_BATCH_SIZE,
+          batch_size,
           col_reader,
         ),
       },
@@ -134,6 +138,7 @@ impl Deserialize for i16 {
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
+    batch_size: usize,
   ) -> Self::Reader
   {
     let col_path = ColumnPath::new(path.to_vec());
@@ -147,7 +152,7 @@ impl Deserialize for i16 {
         column: TypedTripletIter::<Int32Type>::new(
           curr_def_level,
           curr_rep_level,
-          DEFAULT_BATCH_SIZE,
+          batch_size,
           col_reader,
         ),
       },
@@ -169,6 +174,7 @@ impl Deserialize for u16 {
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
+    batch_size: usize,
   ) -> Self::Reader
   {
     let col_path = ColumnPath::new(path.to_vec());
@@ -182,7 +188,7 @@ impl Deserialize for u16 {
         column: TypedTripletIter::<Int32Type>::new(
           curr_def_level,
           curr_rep_level,
-          DEFAULT_BATCH_SIZE,
+          batch_size,
           col_reader,
         ),
       },
@@ -205,6 +211,7 @@ impl Deserialize for i32 {
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
+    batch_size: usize,
   ) -> Self::Reader
   {
     let col_path = ColumnPath::new(path.to_vec());
@@ -217,7 +224,7 @@ impl Deserialize for i32 {
       column: TypedTripletIter::<Int32Type>::new(
         curr_def_level,
         curr_rep_level,
-        DEFAULT_BATCH_SIZE,
+        batch_size,
         col_reader,
       ),
     }
@@ -238,6 +245,7 @@ impl Deserialize for u32 {
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
+    batch_size: usize,
   ) -> Self::Reader
   {
     let col_path = ColumnPath::new(path.to_vec());
@@ -251,7 +259,7 @@ impl Deserialize for u32 {
         column: TypedTripletIter::<Int32Type>::new(
           curr_def_level,
           curr_rep_level,
-          DEFAULT_BATCH_SIZE,
+          batch_size,
           col_reader,
         ),
       },
@@ -274,6 +282,7 @@ impl Deserialize for i64 {
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
+    batch_size: usize,
   ) -> Self::Reader
   {
     let col_path = ColumnPath::new(path.to_vec());
@@ -286,7 +295,7 @@ impl Deserialize for i64 {
       column: TypedTripletIter::<Int64Type>::new(
         curr_def_level,
         curr_rep_level,
-        DEFAULT_BATCH_SIZE,
+        batch_size,
         col_reader,
       ),
     }
@@ -307,6 +316,7 @@ impl Deserialize for u64 {
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
+    batch_size: usize,
   ) -> Self::Reader
   {
     let col_path = ColumnPath::new(path.to_vec());
@@ -320,7 +330,7 @@ impl Deserialize for u64 {
         column: TypedTripletIter::<Int64Type>::new(
           curr_def_level,
           curr_rep_level,
-          DEFAULT_BATCH_SIZE,
+          batch_size,
           col_reader,
         ),
       },
@@ -343,6 +353,7 @@ impl Deserialize for f32 {
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
+    batch_size: usize,
   ) -> Self::Reader
   {
     let col_path = ColumnPath::new(path.to_vec());
@@ -355,7 +366,7 @@ impl Deserialize for f32 {
       column: TypedTripletIter::<FloatType>::new(
         curr_def_level,
         curr_rep_level,
-        DEFAULT_BATCH_SIZE,
+        batch_size,
         col_reader,
       ),
     }
@@ -375,6 +386,7 @@ impl Deserialize for f64 {
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
+    batch_size: usize,
   ) -> Self::Reader
   {
     let col_path = ColumnPath::new(path.to_vec());
@@ -387,7 +399,7 @@ impl Deserialize for f64 {
       column: TypedTripletIter::<DoubleType>::new(
         curr_def_level,
         curr_rep_level,
-        DEFAULT_BATCH_SIZE,
+        batch_size,
         col_reader,
       ),
     }

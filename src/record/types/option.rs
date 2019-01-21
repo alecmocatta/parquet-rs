@@ -1,9 +1,10 @@
+use std::collections::HashMap;
+
 use basic::Repetition;
 use column::reader::ColumnReader;
 use errors::ParquetError;
 use record::{reader::OptionReader, schemas::OptionSchema, Deserialize};
 use schema::types::{ColumnDescPtr, ColumnPath, Type};
-use std::collections::HashMap;
 
 impl<T> Deserialize for Option<T>
 where T: Deserialize
@@ -42,6 +43,7 @@ where T: Deserialize
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
+    batch_size: usize,
   ) -> Self::Reader
   {
     OptionReader {
@@ -52,6 +54,7 @@ where T: Deserialize
         curr_def_level + 1,
         curr_rep_level,
         paths,
+        batch_size,
       ),
     }
   }

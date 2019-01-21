@@ -15,6 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
+use std::mem;
+
 use column::reader::{get_typed_column_reader, ColumnReader, ColumnReaderImpl};
 use data_type::*;
 use errors::{ParquetError, Result};
@@ -24,25 +26,6 @@ use record::{
   Deserialize,
 };
 use schema::types::{ColumnDescPtr, ColumnPath};
-use std::mem;
-
-// /// Macro to generate simple functions that cover all types of triplet iterator.
-// /// $func is a function of a typed triplet iterator and $token is a either {`ref`} or
-// /// {`ref`, `mut`}
-// macro_rules! triplet_enum_func {
-//   ($self:ident, $func:ident, $( $token:tt ),*) => ({
-//     match *$self {
-//       TripletIter::BoolTripletIter($($token)* typed) => typed.$func(),
-//       TripletIter::Int32TripletIter($($token)* typed) => typed.$func(),
-//       TripletIter::Int64TripletIter($($token)* typed) => typed.$func(),
-//       TripletIter::Int96TripletIter($($token)* typed) => typed.$func(),
-//       TripletIter::FloatTripletIter($($token)* typed) => typed.$func(),
-//       TripletIter::DoubleTripletIter($($token)* typed) => typed.$func(),
-//       TripletIter::ByteArrayTripletIter($($token)* typed) => typed.$func(),
-//       TripletIter::FixedLenByteArrayTripletIter($($token)* typed) => typed.$func()
-//     }
-//   });
-// }
 
 /// High level API wrapper on column reader.
 /// Provides per-element access for each primitive column.
@@ -50,8 +33,13 @@ pub struct TripletIter(ValueReader);
 
 impl TripletIter {
   /// Creates new triplet for column reader
-  pub fn new(descr: ColumnDescPtr, reader: ColumnReader, batch_size: usize) -> Self {
-    let schema = Value::parse(descr.self_type()).unwrap().1;
+  pub fn new(
+    descr: ColumnDescPtr,
+    reader: ColumnReader,
+    batch_size: usize,
+  ) -> Result<Self>
+  {
+    let schema = Value::parse(descr.self_type())?.1;
     let mut def = descr.max_def_level();
     let mut rep = descr.max_rep_level();
     match descr.self_type().get_basic_info().repetition() {
@@ -70,17 +58,15 @@ impl TripletIter {
       &mut vec![(ColumnPath::new(vec![]), (descr.clone(), reader))]
         .into_iter()
         .collect(),
+      batch_size,
     );
-    TripletIter(reader)
+    Ok(TripletIter(reader))
   }
 
   /// Invokes underlying typed triplet iterator to buffer current value.
   /// Should be called once - either before `is_null` or `current_value`.
   #[inline]
-  pub fn advance_columns(&mut self) -> Result<bool> {
-    self.0.advance_columns();
-    Ok(self.0.has_next())
-  }
+  pub fn advance_columns(&mut self) -> Result<()> { self.0.advance_columns() }
 
   /// Provides check on values/levels left without invoking the underlying typed triplet
   /// iterator.
@@ -194,8 +180,7 @@ impl<T: DataType> TypedTripletIter<T> {
       self.current_def_level()
     );
     let ret = mem::replace(&mut self.values[self.curr_triplet_index], T::T::default());
-    self.advance_columns().unwrap();
-    Ok(ret)
+    self.advance_columns().map(|()| ret)
   }
 
   /// Returns current definition level.
@@ -225,7 +210,7 @@ impl<T: DataType> TypedTripletIter<T> {
 
   /// Advances to the next triplet.
   /// Returns true, if there are more records to read, false there are no records left.
-  pub fn advance_columns(&mut self) -> Result<bool> {
+  pub fn advance_columns(&mut self) -> Result<()> {
     self.curr_triplet_index += 1;
 
     if self.curr_triplet_index >= self.triplets_left {
@@ -254,7 +239,7 @@ impl<T: DataType> TypedTripletIter<T> {
       // No more values or levels to read
       if values_read == 0 && levels_read == 0 {
         self.has_next = false;
-        return Ok(false);
+        return Ok(());
       }
 
       // We never read values more than levels
@@ -290,7 +275,7 @@ impl<T: DataType> TypedTripletIter<T> {
     }
 
     self.has_next = true;
-    Ok(true)
+    Ok(())
   }
 }
 
@@ -301,20 +286,20 @@ mod tests {
   use schema::types::ColumnPath;
   use util::test_common::get_test_file;
 
-  // #[test]
-  // #[should_panic(expected = "Expected positive batch size")]
-  // fn test_triplet_zero_batch_size() {
-  //   let column_path =
-  //     ColumnPath::from(vec!["b_struct".to_string(), "b_c_int".to_string()]);
-  //   test_column_in_file(
-  //     "nulls.snappy.parquet",
-  //     0,
-  //     &column_path,
-  //     &vec![],
-  //     &vec![],
-  //     &vec![],
-  //   );
-  // }
+  #[test]
+  #[should_panic(expected = "Expected positive batch size")]
+  fn test_triplet_zero_batch_size() {
+    let column_path =
+      ColumnPath::from(vec!["b_struct".to_string(), "b_c_int".to_string()]);
+    test_column_in_file(
+      "nulls.snappy.parquet",
+      0,
+      &column_path,
+      &vec![],
+      &vec![],
+      &vec![],
+    );
+  }
 
   #[test]
   fn test_triplet_null_column() {
@@ -505,7 +490,7 @@ mod tests {
     expected_rep_levels: &[i16],
   )
   {
-    let mut iter = TripletIter::new(descr.clone(), reader, batch_size);
+    let mut iter = TripletIter::new(descr.clone(), reader, batch_size).unwrap();
     let mut values: Vec<Value> = Vec::new();
     let mut def_levels: Vec<i16> = Vec::new();
     let mut rep_levels: Vec<i16> = Vec::new();

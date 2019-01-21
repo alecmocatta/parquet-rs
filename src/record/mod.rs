@@ -32,8 +32,6 @@ use std::{
   fmt::{self, Display},
   marker::PhantomData,
 };
-// pub use self::api::{List, ListAccessor, Map, MapAccessor, Row, RowAccessor};
-// pub use self::triplet::TypedTripletIter;
 
 pub trait DisplayType {
   fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error>;
@@ -58,12 +56,16 @@ pub trait Deserialize: Sized {
   type Schema: Display + DisplayType;
   type Reader: Reader<Item = Self>;
 
+  /// Parse a [`Type`] into `Self::Schema`.
   fn parse(schema: &Type) -> Result<(String, Self::Schema), ParquetError>;
+
+  /// Builds tree of readers for the specified schema recursively.
   fn reader(
     schema: &Self::Schema,
     path: &mut Vec<String>,
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
+    batch_size: usize,
   ) -> Self::Reader;
 }

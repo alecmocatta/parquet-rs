@@ -1,3 +1,5 @@
+use std::{collections::HashMap, marker::PhantomData, string::FromUtf8Error};
+
 use basic::{LogicalType, Repetition, Type as PhysicalType};
 use column::reader::ColumnReader;
 use data_type::{ByteArrayType, FixedLenByteArrayType};
@@ -6,11 +8,10 @@ use record::{
   reader::{ByteArrayReader, FixedLenByteArrayReader, MapReader},
   schemas::{ArraySchema, StringSchema, VecSchema},
   triplet::TypedTripletIter,
-  types::{downcast, Value, DEFAULT_BATCH_SIZE},
+  types::{downcast, Value},
   Deserialize,
 };
 use schema::types::{ColumnDescPtr, ColumnPath, Type};
-use std::{collections::HashMap, marker::PhantomData, string::FromUtf8Error};
 
 impl Deserialize for Vec<u8> {
   type Reader = ByteArrayReader;
@@ -26,6 +27,7 @@ impl Deserialize for Vec<u8> {
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
+    batch_size: usize,
   ) -> Self::Reader
   {
     let col_path = ColumnPath::new(path.to_vec());
@@ -38,7 +40,7 @@ impl Deserialize for Vec<u8> {
       column: TypedTripletIter::<ByteArrayType>::new(
         curr_def_level,
         curr_rep_level,
-        DEFAULT_BATCH_SIZE,
+        batch_size,
         col_reader,
       ),
     }
@@ -59,6 +61,7 @@ impl Deserialize for String {
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
+    batch_size: usize,
   ) -> Self::Reader
   {
     let col_path = ColumnPath::new(path.to_vec());
@@ -72,7 +75,7 @@ impl Deserialize for String {
         column: TypedTripletIter::<ByteArrayType>::new(
           curr_def_level,
           curr_rep_level,
-          DEFAULT_BATCH_SIZE,
+          batch_size,
           col_reader,
         ),
       },
@@ -113,6 +116,7 @@ macro_rules! impl_parquet_deserialize_array {
         curr_def_level: i16,
         curr_rep_level: i16,
         paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
+        batch_size: usize,
       ) -> Self::Reader
       {
         let col_path = ColumnPath::new(path.to_vec());
@@ -126,7 +130,7 @@ macro_rules! impl_parquet_deserialize_array {
             column: TypedTripletIter::<FixedLenByteArrayType>::new(
               curr_def_level,
               curr_rep_level,
-              DEFAULT_BATCH_SIZE,
+              batch_size,
               col_reader,
             ),
           },
@@ -161,6 +165,7 @@ macro_rules! impl_parquet_deserialize_array {
         curr_def_level: i16,
         curr_rep_level: i16,
         paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
+        batch_size: usize,
       ) -> Self::Reader
       {
         let col_path = ColumnPath::new(path.to_vec());
@@ -174,7 +179,7 @@ macro_rules! impl_parquet_deserialize_array {
             column: TypedTripletIter::<FixedLenByteArrayType>::new(
               curr_def_level,
               curr_rep_level,
-              DEFAULT_BATCH_SIZE,
+              batch_size,
               col_reader,
             ),
           },

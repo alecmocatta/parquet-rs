@@ -1,3 +1,9 @@
+use std::{
+  collections::HashMap,
+  convert::TryInto,
+  hash::{Hash, Hasher},
+};
+
 use basic::{LogicalType, Repetition, Type as PhysicalType};
 use column::reader::ColumnReader;
 use errors::ParquetError;
@@ -12,33 +18,54 @@ use record::{
   Deserialize,
 };
 use schema::types::{ColumnDescPtr, ColumnPath, Type};
-use std::{
-  collections::HashMap,
-  convert::TryInto,
-  hash::{Hash, Hasher},
-};
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Value {
+  // Primitive types
+  /// Boolean value (`true`, `false`).
   Bool(bool),
+  /// Signed integer INT_8.
   U8(u8),
+  /// Signed integer INT_16.
   I8(i8),
+  /// Signed integer INT_32.
   U16(u16),
+  /// Signed integer INT_64.
   I16(i16),
+  /// Unsigned integer UINT_8.
   U32(u32),
+  /// Unsigned integer UINT_16.
   I32(i32),
+  /// Unsigned integer UINT_32.
   U64(u64),
+  /// Unsigned integer UINT_64.
   I64(i64),
+  /// IEEE 32-bit floating point value.
   F32(f32),
+  /// IEEE 64-bit floating point value.
   F64(f64),
+  /// Milliseconds from the Unix epoch, 1 January 1970.
   Timestamp(Timestamp),
+  /// General binary value.
   Array(Vec<u8>),
+  /// UTF-8 encoded character string.
   String(String),
+
+  // Decimal value.
+  // Date without a time of day, stores the number of days from the Unix epoch, 1
+  // January 1970.
+
+  // Complex types
+  /// List of elements.
   List(List<Value>),
+  /// Map of key-value pairs.
   Map(Map<Value, Value>),
+  /// Struct, child elements are tuples of field-value pairs.
   Group(Group),
+  /// Optional element.
   Option(Box<Option<Value>>),
 }
+#[allow(clippy::derive_hash_xor_eq)]
 impl Hash for Value {
   fn hash<H: Hasher>(&self, state: &mut H) {
     match self {
@@ -665,10 +692,8 @@ impl Deserialize for Value {
       )));
     }
 
-    let mut value = value.ok_or(ParquetError::General(format!(
-      "Can't parse group {:?}",
-      schema
-    )))?;
+    let mut value = value
+      .ok_or_else(|| ParquetError::General(format!("Can't parse group {:?}", schema)))?;
 
     match schema.get_basic_info().repetition() {
       Repetition::OPTIONAL => {
@@ -689,6 +714,7 @@ impl Deserialize for Value {
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
+    batch_size: usize,
   ) -> Self::Reader
   {
     match *schema {
@@ -698,6 +724,7 @@ impl Deserialize for Value {
         curr_def_level,
         curr_rep_level,
         paths,
+        batch_size,
       )),
       ValueSchema::U8(ref schema) => ValueReader::U8(<u8 as Deserialize>::reader(
         schema,
@@ -705,6 +732,7 @@ impl Deserialize for Value {
         curr_def_level,
         curr_rep_level,
         paths,
+        batch_size,
       )),
       ValueSchema::I8(ref schema) => ValueReader::I8(<i8 as Deserialize>::reader(
         schema,
@@ -712,6 +740,7 @@ impl Deserialize for Value {
         curr_def_level,
         curr_rep_level,
         paths,
+        batch_size,
       )),
       ValueSchema::U16(ref schema) => ValueReader::U16(<u16 as Deserialize>::reader(
         schema,
@@ -719,6 +748,7 @@ impl Deserialize for Value {
         curr_def_level,
         curr_rep_level,
         paths,
+        batch_size,
       )),
       ValueSchema::I16(ref schema) => ValueReader::I16(<i16 as Deserialize>::reader(
         schema,
@@ -726,6 +756,7 @@ impl Deserialize for Value {
         curr_def_level,
         curr_rep_level,
         paths,
+        batch_size,
       )),
       ValueSchema::U32(ref schema) => ValueReader::U32(<u32 as Deserialize>::reader(
         schema,
@@ -733,6 +764,7 @@ impl Deserialize for Value {
         curr_def_level,
         curr_rep_level,
         paths,
+        batch_size,
       )),
       ValueSchema::I32(ref schema) => ValueReader::I32(<i32 as Deserialize>::reader(
         schema,
@@ -740,6 +772,7 @@ impl Deserialize for Value {
         curr_def_level,
         curr_rep_level,
         paths,
+        batch_size,
       )),
       ValueSchema::U64(ref schema) => ValueReader::U64(<u64 as Deserialize>::reader(
         schema,
@@ -747,6 +780,7 @@ impl Deserialize for Value {
         curr_def_level,
         curr_rep_level,
         paths,
+        batch_size,
       )),
       ValueSchema::I64(ref schema) => ValueReader::I64(<i64 as Deserialize>::reader(
         schema,
@@ -754,6 +788,7 @@ impl Deserialize for Value {
         curr_def_level,
         curr_rep_level,
         paths,
+        batch_size,
       )),
       ValueSchema::F32(ref schema) => ValueReader::F32(<f32 as Deserialize>::reader(
         schema,
@@ -761,6 +796,7 @@ impl Deserialize for Value {
         curr_def_level,
         curr_rep_level,
         paths,
+        batch_size,
       )),
       ValueSchema::F64(ref schema) => ValueReader::F64(<f64 as Deserialize>::reader(
         schema,
@@ -768,6 +804,7 @@ impl Deserialize for Value {
         curr_def_level,
         curr_rep_level,
         paths,
+        batch_size,
       )),
       ValueSchema::Timestamp(ref schema) => {
         ValueReader::Timestamp(<Timestamp as Deserialize>::reader(
@@ -776,6 +813,7 @@ impl Deserialize for Value {
           curr_def_level,
           curr_rep_level,
           paths,
+          batch_size,
         ))
       },
       ValueSchema::Array(ref schema) => {
@@ -785,6 +823,7 @@ impl Deserialize for Value {
           curr_def_level,
           curr_rep_level,
           paths,
+          batch_size,
         ))
       },
       ValueSchema::String(ref schema) => {
@@ -794,6 +833,7 @@ impl Deserialize for Value {
           curr_def_level,
           curr_rep_level,
           paths,
+          batch_size,
         ))
       },
       ValueSchema::List(ref schema) => {
@@ -803,6 +843,7 @@ impl Deserialize for Value {
           curr_def_level,
           curr_rep_level,
           paths,
+          batch_size,
         )))
       },
       ValueSchema::Map(ref schema) => {
@@ -812,6 +853,7 @@ impl Deserialize for Value {
           curr_def_level,
           curr_rep_level,
           paths,
+          batch_size,
         )))
       },
       ValueSchema::Group(ref schema) => {
@@ -821,6 +863,7 @@ impl Deserialize for Value {
           curr_def_level,
           curr_rep_level,
           paths,
+          batch_size,
         ))
       },
       ValueSchema::Option(ref schema) => {
@@ -830,6 +873,7 @@ impl Deserialize for Value {
           curr_def_level,
           curr_rep_level,
           paths,
+          batch_size,
         )))
       },
     }

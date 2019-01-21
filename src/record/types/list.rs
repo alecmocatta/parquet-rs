@@ -1,3 +1,11 @@
+use std::{
+  collections::HashMap,
+  fmt::{self, Debug},
+  ops::Index,
+  slice::{self, SliceIndex},
+  vec,
+};
+
 use basic::{LogicalType, Repetition};
 use column::reader::ColumnReader;
 use errors::ParquetError;
@@ -7,15 +15,11 @@ use record::{
   Deserialize,
 };
 use schema::types::{ColumnDescPtr, ColumnPath, Type};
-use std::{
-  collections::HashMap,
-  fmt::{self, Debug},
-  ops::Index,
-  slice::{self, SliceIndex},
-  vec,
-};
 
-// https://github.com/apache/parquet-format/blob/master/LogicalTypes.md#backward-compatibility-rules
+/// Returns true if repeated type is an element type for the list.
+/// Used to determine legacy list types.
+/// This method is copied from Spark Parquet reader and is based on the reference:
+/// https://github.com/apache/parquet-format/blob/master/LogicalTypes.md#backward-compatibility-rules
 pub(super) fn parse_list<T: Deserialize>(
   schema: &Type,
 ) -> Result<ListSchema<T::Schema>, ParquetError> {
@@ -78,6 +82,9 @@ where T: Deserialize
     {
       return parse_list::<T>(schema).map(|schema2| (schema.name().to_owned(), schema2));
     }
+    // A repeated field that is neither contained by a `LIST`- or `MAP`-annotated group
+    // nor annotated by `LIST` or `MAP` should be interpreted as a required list of
+    // required elements where the element type is the type of the field.
     if schema.get_basic_info().repetition() == Repetition::REPEATED {
       let mut schema2: Type = schema.clone();
       let basic_info = match schema2 {
@@ -105,6 +112,7 @@ where T: Deserialize
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
+    batch_size: usize,
   ) -> Self::Reader
   {
     MapReader(
@@ -121,6 +129,7 @@ where T: Deserialize
             curr_def_level + 1,
             curr_rep_level + 1,
             paths,
+            batch_size,
           );
           path.pop().unwrap();
           path.pop().unwrap();
@@ -139,6 +148,7 @@ where T: Deserialize
             curr_def_level + 1,
             curr_rep_level + 1,
             paths,
+            batch_size,
           );
           path.pop().unwrap();
 
@@ -155,6 +165,7 @@ where T: Deserialize
             curr_def_level + 1,
             curr_rep_level + 1,
             paths,
+            batch_size,
           );
           RepeatedReader {
             def_level: curr_def_level,

@@ -1,3 +1,9 @@
+use std::{
+  collections::{hash_map, HashMap},
+  fmt::{self, Debug},
+  hash::Hash,
+};
+
 use basic::{LogicalType, Repetition};
 use column::reader::ColumnReader;
 use errors::ParquetError;
@@ -7,11 +13,6 @@ use record::{
   Deserialize,
 };
 use schema::types::{ColumnDescPtr, ColumnPath, Type};
-use std::{
-  collections::{hash_map, HashMap},
-  fmt::{self, Debug},
-  hash::Hash,
-};
 
 // https://github.com/apache/parquet-format/blob/master/LogicalTypes.md#backward-compatibility-rules
 pub(super) fn parse_map<K: Deserialize, V: Deserialize>(
@@ -90,6 +91,7 @@ where
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
+    batch_size: usize,
   ) -> Self::Reader
   {
     let key_value_name = schema.2.as_ref().map(|x| &**x).unwrap_or("key_value");
@@ -104,6 +106,7 @@ where
       curr_def_level + 1,
       curr_rep_level + 1,
       paths,
+      batch_size,
     );
     path.pop().unwrap();
     path.push(value_name.to_owned());
@@ -113,6 +116,7 @@ where
       curr_def_level + 1,
       curr_rep_level + 1,
       paths,
+      batch_size,
     );
     path.pop().unwrap();
     path.pop().unwrap();

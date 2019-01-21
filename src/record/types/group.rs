@@ -1,3 +1,13 @@
+use std::{
+  collections::HashMap,
+  fmt::{self, Debug},
+  marker::PhantomData,
+  ops::Index,
+  rc::Rc,
+  slice::SliceIndex,
+  str, vec,
+};
+
 use basic::Repetition;
 use column::reader::ColumnReader;
 use errors::ParquetError;
@@ -8,15 +18,6 @@ use record::{
   Deserialize,
 };
 use schema::types::{ColumnDescPtr, ColumnPath, Type};
-use std::{
-  collections::HashMap,
-  fmt::{self, Debug},
-  marker::PhantomData,
-  ops::Index,
-  rc::Rc,
-  slice::SliceIndex,
-  str, vec,
-};
 
 #[derive(Clone, PartialEq)]
 pub struct Group(pub(crate) Vec<Value>, pub(crate) Rc<HashMap<String, usize>>);
@@ -58,6 +59,7 @@ impl Deserialize for Group {
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
+    batch_size: usize,
   ) -> Self::Reader
   {
     let mut names_ = vec![None; schema.0.len()];
@@ -70,7 +72,14 @@ impl Deserialize for Group {
       .enumerate()
       .map(|(i, field)| {
         path.push(names_[i].take().unwrap());
-        let ret = Value::reader(field, path, curr_def_level, curr_rep_level, paths);
+        let ret = Value::reader(
+          field,
+          path,
+          curr_def_level,
+          curr_rep_level,
+          paths,
+          batch_size,
+        );
         path.pop().unwrap();
         ret
       })
@@ -118,6 +127,7 @@ impl Deserialize for Root<Group> {
     curr_def_level: i16,
     curr_rep_level: i16,
     paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
+    batch_size: usize,
   ) -> Self::Reader
   {
     RootReader(Group::reader(
@@ -126,6 +136,7 @@ impl Deserialize for Root<Group> {
       curr_def_level,
       curr_rep_level,
       paths,
+      batch_size,
     ))
   }
 }

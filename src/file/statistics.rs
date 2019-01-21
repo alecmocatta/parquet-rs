@@ -37,7 +37,7 @@
 //! }
 //! ```
 
-use std::{cmp, fmt};
+use std::{cmp, fmt, ptr};
 
 use basic::Type;
 use byteorder::{ByteOrder, LittleEndian};
@@ -149,17 +149,29 @@ pub fn from_thrift(
           // statistics for INT96 columns.
           let min = min.map(|data| {
             assert_eq!(data.len(), 12);
-            unsafe {
-              let raw = ::std::slice::from_raw_parts(data.as_ptr() as *mut u32, 3);
-              Int96::new(raw[0], raw[1], raw[2])
-            }
+            #[allow(clippy::cast_ptr_alignment)]
+            let raw = data.as_ptr() as *const u32;
+            let (a, b, c) = unsafe {
+              (
+                ptr::read_unaligned(raw),
+                ptr::read_unaligned(raw.add(1)),
+                ptr::read_unaligned(raw.add(2)),
+              )
+            };
+            Int96::new(a, b, c)
           });
           let max = max.map(|data| {
             assert_eq!(data.len(), 12);
-            unsafe {
-              let raw = ::std::slice::from_raw_parts(data.as_ptr() as *mut u32, 3);
-              Int96::new(raw[0], raw[1], raw[2])
-            }
+            #[allow(clippy::cast_ptr_alignment)]
+            let raw = data.as_ptr() as *const u32;
+            let (a, b, c) = unsafe {
+              (
+                ptr::read_unaligned(raw),
+                ptr::read_unaligned(raw.add(1)),
+                ptr::read_unaligned(raw.add(2)),
+              )
+            };
+            Int96::new(a, b, c)
           });
           Statistics::int96(min, max, distinct_count, null_count, old_format)
         },
