@@ -309,14 +309,14 @@ mod tests {
   fn test_triplet_null_column() {
     let path = vec!["b_struct", "b_c_int"];
     let values = vec![
-      // Value::Option(Box::new(None)),
-      // Value::Option(Box::new(None)),
-      // Value::Option(Box::new(None)),
-      // Value::Option(Box::new(None)),
-      // Value::Option(Box::new(None)),
-      // Value::Option(Box::new(None)),
-      // Value::Option(Box::new(None)),
-      // Value::Option(Box::new(None)),
+      Value::Option(Box::new(None)),
+      Value::Option(Box::new(None)),
+      Value::Option(Box::new(None)),
+      Value::Option(Box::new(None)),
+      Value::Option(Box::new(None)),
+      Value::Option(Box::new(None)),
+      Value::Option(Box::new(None)),
+      Value::Option(Box::new(None)),
     ];
     let def_levels = vec![1, 1, 1, 1, 1, 1, 1, 1];
     let rep_levels = vec![0, 0, 0, 0, 0, 0, 0, 0];
@@ -349,11 +349,11 @@ mod tests {
     let path = vec!["nested_struct", "A"];
     let values = vec![
       Value::Option(Box::new(Some(Value::I32(1)))),
-      // Value::Option(Box::new(None)),
-      // Value::Option(Box::new(None)),
-      // Value::Option(Box::new(None)),
-      // Value::Option(Box::new(None)),
-      // Value::Option(Box::new(None)),
+      Value::Option(Box::new(None)),
+      Value::Option(Box::new(None)),
+      Value::Option(Box::new(None)),
+      Value::Option(Box::new(None)),
+      Value::Option(Box::new(None)),
       Value::Option(Box::new(Some(Value::I32(7)))),
     ];
     let def_levels = vec![2, 1, 1, 1, 1, 0, 2];
@@ -374,20 +374,20 @@ mod tests {
       Value::Option(Box::new(Some(Value::String("a".to_string())))),
       Value::Option(Box::new(Some(Value::String("b".to_string())))),
       Value::Option(Box::new(Some(Value::String("c".to_string())))),
-      // Value::Option(Box::new(None)),
+      Value::Option(Box::new(None)),
       Value::Option(Box::new(Some(Value::String("d".to_string())))),
       Value::Option(Box::new(Some(Value::String("a".to_string())))),
       Value::Option(Box::new(Some(Value::String("b".to_string())))),
       Value::Option(Box::new(Some(Value::String("c".to_string())))),
       Value::Option(Box::new(Some(Value::String("d".to_string())))),
-      // Value::Option(Box::new(None)),
+      Value::Option(Box::new(None)),
       Value::Option(Box::new(Some(Value::String("e".to_string())))),
       Value::Option(Box::new(Some(Value::String("a".to_string())))),
       Value::Option(Box::new(Some(Value::String("b".to_string())))),
       Value::Option(Box::new(Some(Value::String("c".to_string())))),
       Value::Option(Box::new(Some(Value::String("d".to_string())))),
       Value::Option(Box::new(Some(Value::String("e".to_string())))),
-      // Value::Option(Box::new(None)),
+      Value::Option(Box::new(None)),
       Value::Option(Box::new(Some(Value::String("f".to_string())))),
     ];
     let def_levels = vec![7, 7, 7, 4, 7, 7, 7, 7, 7, 4, 7, 7, 7, 7, 7, 7, 4, 7];
@@ -408,6 +408,8 @@ mod tests {
       Value::I32(1),
       Value::I32(2),
       Value::I32(1),
+      Value::Option(Box::new(None)),
+      Value::Option(Box::new(None)),
       Value::I32(1),
       Value::I32(3),
       Value::I32(4),
@@ -506,10 +508,11 @@ mod tests {
     while iter.has_next() {
       def_levels.push(iter.current_def_level());
       rep_levels.push(iter.current_rep_level());
-      if iter.current_def_level() >= descr.max_def_level() {
+      if iter.current_def_level() == descr.max_def_level() {
         values.push(iter.read().unwrap());
       } else {
         iter.advance_columns().unwrap();
+        values.push(Value::Option(Box::new(None)));
       }
     }
 
