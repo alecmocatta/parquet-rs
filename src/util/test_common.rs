@@ -16,8 +16,8 @@
 // under the License.
 
 use rand::{
-  distributions::{range::SampleRange, Distribution, Standard},
-  thread_rng, Rng,
+    distributions::{range::SampleRange, Distribution, Standard},
+    thread_rng, Rng,
 };
 use std::{env, fs, io::Write, path};
 
@@ -25,144 +25,158 @@ use crate::{data_type::*, util::memory::ByteBufferPtr};
 
 /// Random generator of data type `T` values and sequences.
 pub trait RandGen<T: DataType> {
-  fn gen(len: i32) -> T::T;
+    fn gen(len: i32) -> T::T;
 
-  fn gen_vec(len: i32, total: usize) -> Vec<T::T> {
-    let mut result = vec![];
-    for _ in 0..total {
-      result.push(Self::gen(len))
+    fn gen_vec(len: i32, total: usize) -> Vec<T::T> {
+        let mut result = vec![];
+        for _ in 0..total {
+            result.push(Self::gen(len))
+        }
+        result
     }
-    result
-  }
 }
 
 impl<T: DataType> RandGen<T> for T {
-  default fn gen(_: i32) -> T::T {
-    panic!("Unsupported data type");
-  }
+    default fn gen(_: i32) -> T::T {
+        panic!("Unsupported data type");
+    }
 }
 
 impl RandGen<BoolType> for BoolType {
-  fn gen(_: i32) -> bool { thread_rng().gen::<bool>() }
+    fn gen(_: i32) -> bool {
+        thread_rng().gen::<bool>()
+    }
 }
 
 impl RandGen<Int32Type> for Int32Type {
-  fn gen(_: i32) -> i32 { thread_rng().gen::<i32>() }
+    fn gen(_: i32) -> i32 {
+        thread_rng().gen::<i32>()
+    }
 }
 
 impl RandGen<Int64Type> for Int64Type {
-  fn gen(_: i32) -> i64 { thread_rng().gen::<i64>() }
+    fn gen(_: i32) -> i64 {
+        thread_rng().gen::<i64>()
+    }
 }
 
 impl RandGen<Int96Type> for Int96Type {
-  fn gen(_: i32) -> Int96 {
-    let mut rng = thread_rng();
-    Int96::new(rng.gen::<u32>(), rng.gen::<u32>(), rng.gen::<u32>())
-  }
+    fn gen(_: i32) -> Int96 {
+        let mut rng = thread_rng();
+        Int96::new(rng.gen::<u32>(), rng.gen::<u32>(), rng.gen::<u32>())
+    }
 }
 
 impl RandGen<FloatType> for FloatType {
-  fn gen(_: i32) -> f32 { thread_rng().gen::<f32>() }
+    fn gen(_: i32) -> f32 {
+        thread_rng().gen::<f32>()
+    }
 }
 
 impl RandGen<DoubleType> for DoubleType {
-  fn gen(_: i32) -> f64 { thread_rng().gen::<f64>() }
+    fn gen(_: i32) -> f64 {
+        thread_rng().gen::<f64>()
+    }
 }
 
 impl RandGen<ByteArrayType> for ByteArrayType {
-  fn gen(_: i32) -> ByteArray {
-    let mut rng = thread_rng();
-    let mut result = ByteArray::new();
-    let mut value = vec![];
-    let len = rng.gen_range::<usize>(0, 128);
-    for _ in 0..len {
-      value.push(rng.gen_range(0, 255) & 0xFF);
+    fn gen(_: i32) -> ByteArray {
+        let mut rng = thread_rng();
+        let mut result = ByteArray::new();
+        let mut value = vec![];
+        let len = rng.gen_range::<usize>(0, 128);
+        for _ in 0..len {
+            value.push(rng.gen_range(0, 255) & 0xFF);
+        }
+        result.set_data(ByteBufferPtr::new(value));
+        result
     }
-    result.set_data(ByteBufferPtr::new(value));
-    result
-  }
 }
 
 impl RandGen<FixedLenByteArrayType> for FixedLenByteArrayType {
-  fn gen(len: i32) -> ByteArray {
-    let mut rng = thread_rng();
-    let value_len = if len < 0 {
-      rng.gen_range::<usize>(0, 128)
-    } else {
-      len as usize
-    };
-    let value = random_bytes(value_len);
-    ByteArray::from(value)
-  }
+    fn gen(len: i32) -> ByteArray {
+        let mut rng = thread_rng();
+        let value_len = if len < 0 {
+            rng.gen_range::<usize>(0, 128)
+        } else {
+            len as usize
+        };
+        let value = random_bytes(value_len);
+        ByteArray::from(value)
+    }
 }
 
 pub fn random_bytes(n: usize) -> Vec<u8> {
-  let mut result = vec![];
-  let mut rng = thread_rng();
-  for _ in 0..n {
-    result.push(rng.gen_range(0, 255) & 0xFF);
-  }
-  result
+    let mut result = vec![];
+    let mut rng = thread_rng();
+    for _ in 0..n {
+        result.push(rng.gen_range(0, 255) & 0xFF);
+    }
+    result
 }
 
 pub fn random_bools(n: usize) -> Vec<bool> {
-  let mut result = vec![];
-  let mut rng = thread_rng();
-  for _ in 0..n {
-    result.push(rng.gen::<bool>());
-  }
-  result
+    let mut result = vec![];
+    let mut rng = thread_rng();
+    for _ in 0..n {
+        result.push(rng.gen::<bool>());
+    }
+    result
 }
 
 pub fn random_numbers<T>(n: usize) -> Vec<T>
-where Standard: Distribution<T> {
-  let mut rng = thread_rng();
-  Standard.sample_iter(&mut rng).take(n).collect()
+where
+    Standard: Distribution<T>,
+{
+    let mut rng = thread_rng();
+    Standard.sample_iter(&mut rng).take(n).collect()
 }
 
 pub fn random_numbers_range<T>(n: usize, low: T, high: T, result: &mut Vec<T>)
-where T: PartialOrd + SampleRange + Copy {
-  let mut rng = thread_rng();
-  for _ in 0..n {
-    result.push(rng.gen_range(low, high));
-  }
+where
+    T: PartialOrd + SampleRange + Copy,
+{
+    let mut rng = thread_rng();
+    for _ in 0..n {
+        result.push(rng.gen_range(low, high));
+    }
 }
 
 /// Returns path to the test parquet file in 'data' directory
 pub fn get_test_path(file_name: &str) -> path::PathBuf {
-  let mut path_buf = env::current_dir().unwrap();
-  path_buf.push("data");
-  path_buf.push(file_name);
-  path_buf
+    let mut path_buf = env::current_dir().unwrap();
+    path_buf.push("data");
+    path_buf.push(file_name);
+    path_buf
 }
 
 /// Returns file handle for a test parquet file from 'data' directory
 pub fn get_test_file(file_name: &str) -> fs::File {
-  let file = fs::File::open(get_test_path(file_name).as_path());
-  assert!(file.is_ok());
-  file.unwrap()
+    let file = fs::File::open(get_test_path(file_name).as_path());
+    assert!(file.is_ok());
+    file.unwrap()
 }
 
 /// Returns file handle for a temp file in 'target' directory with a provided content
 pub fn get_temp_file(file_name: &str, content: &[u8]) -> fs::File {
-  // build tmp path to a file in "target/debug/testdata"
-  let mut path_buf = env::current_dir().unwrap();
-  path_buf.push("target");
-  path_buf.push("debug");
-  path_buf.push("testdata");
-  fs::create_dir_all(&path_buf).unwrap();
-  path_buf.push(file_name);
+    // build tmp path to a file in "target/debug/testdata"
+    let mut path_buf = env::current_dir().unwrap();
+    path_buf.push("target");
+    path_buf.push("debug");
+    path_buf.push("testdata");
+    fs::create_dir_all(&path_buf).unwrap();
+    path_buf.push(file_name);
 
-  // write file content
-  let mut tmp_file = fs::File::create(path_buf.as_path()).unwrap();
-  tmp_file.write_all(content).unwrap();
-  tmp_file.sync_all().unwrap();
+    // write file content
+    let mut tmp_file = fs::File::create(path_buf.as_path()).unwrap();
+    tmp_file.write_all(content).unwrap();
+    tmp_file.sync_all().unwrap();
 
-  // return file handle for both read and write
-  let file = fs::OpenOptions::new()
-    .read(true)
-    .write(true)
-    .open(path_buf.as_path());
-  assert!(file.is_ok());
-  file.unwrap()
+    // return file handle for both read and write
+    let file = fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(path_buf.as_path());
+    assert!(file.is_ok());
+    file.unwrap()
 }

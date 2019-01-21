@@ -13,19 +13,19 @@ use super::schemas::ValueSchema;
 use crate::errors::ParquetError;
 
 pub use self::{
-  array::*, decimal::*, group::*, list::*, map::*, numbers::*, option::*, time::*,
-  tuple::*, value::*,
+    array::*, decimal::*, group::*, list::*, map::*, numbers::*, option::*, time::*, tuple::*,
+    value::*,
 };
 
 pub trait Downcast<T> {
-  fn downcast(self) -> Result<T, ParquetError>;
+    fn downcast(self) -> Result<T, ParquetError>;
 }
 
-fn downcast<T>(
-  (name, schema): (String, ValueSchema),
-) -> Result<(String, T), ParquetError>
-where ValueSchema: Downcast<T> {
-  schema.downcast().map(|schema| (name, schema))
+fn downcast<T>((name, schema): (String, ValueSchema)) -> Result<(String, T), ParquetError>
+where
+    ValueSchema: Downcast<T>,
+{
+    schema.downcast().map(|schema| (name, schema))
 }
 
 #[derive(Clone, Hash, PartialEq, Eq, Debug)]

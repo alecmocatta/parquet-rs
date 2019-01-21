@@ -64,8 +64,8 @@
 //! #![feature(try_from)]
 //!
 //! use parquet::{
-//!   file::reader::{FileReader, SerializedFileReader},
-//!   record::types::Row,
+//!     file::reader::{FileReader, SerializedFileReader},
+//!     record::types::Row,
 //! };
 //! use std::convert::TryFrom;
 //!
@@ -74,8 +74,8 @@
 //! // Reading data using record API with optional projection schema.
 //! let mut iter = reader.get_row_iter::<Row>(None).unwrap();
 //! while let Some(record) = iter.next() {
-//!   // See record API for different field accessors
-//!   println!("{:?}", record);
+//!     // See record API for different field accessors
+//!     println!("{:?}", record);
 //! }
 //! ```
 //!
@@ -140,8 +140,8 @@ pub mod data_type;
 
 // Exported for external use, such as benchmarks
 pub use crate::{
-  encodings::{decoding, encoding},
-  util::memory,
+    encodings::{decoding, encoding},
+    util::memory,
 };
 
 #[macro_use]

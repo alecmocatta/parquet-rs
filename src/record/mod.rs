@@ -24,51 +24,56 @@ mod triplet;
 pub mod types;
 
 use std::{
-  collections::HashMap,
-  fmt::{self, Display},
-  marker::PhantomData,
+    collections::HashMap,
+    fmt::{self, Display},
+    marker::PhantomData,
 };
 
 use crate::{
-  column::reader::ColumnReader,
-  errors::ParquetError,
-  record::reader::Reader,
-  schema::types::{ColumnDescPtr, ColumnPath, Type},
+    column::reader::ColumnReader,
+    errors::ParquetError,
+    record::reader::Reader,
+    schema::types::{ColumnDescPtr, ColumnPath, Type},
 };
 
 pub trait DisplayType {
-  fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error>;
+    fn fmt(f: &mut fmt::Formatter) -> Result<(), fmt::Error>;
 }
 
 struct DisplayDisplayType<T>(PhantomData<fn(T)>)
-where T: DisplayType;
+where
+    T: DisplayType;
 impl<T> DisplayDisplayType<T>
-where T: DisplayType
+where
+    T: DisplayType,
 {
-  fn new() -> Self { Self(PhantomData) }
+    fn new() -> Self {
+        Self(PhantomData)
+    }
 }
 impl<T> Display for DisplayDisplayType<T>
-where T: DisplayType
+where
+    T: DisplayType,
 {
-  fn fmt(&self, f: &mut fmt::Formatter) -> std::result::Result<(), fmt::Error> {
-    T::fmt(f)
-  }
+    fn fmt(&self, f: &mut fmt::Formatter) -> std::result::Result<(), fmt::Error> {
+        T::fmt(f)
+    }
 }
 
 pub trait Deserialize: Sized {
-  type Schema: Display + DisplayType;
-  type Reader: Reader<Item = Self>;
+    type Schema: Display + DisplayType;
+    type Reader: Reader<Item = Self>;
 
-  /// Parse a [`Type`] into `Self::Schema`.
-  fn parse(schema: &Type) -> Result<(String, Self::Schema), ParquetError>;
+    /// Parse a [`Type`] into `Self::Schema`.
+    fn parse(schema: &Type) -> Result<(String, Self::Schema), ParquetError>;
 
-  /// Builds tree of readers for the specified schema recursively.
-  fn reader(
-    schema: &Self::Schema,
-    path: &mut Vec<String>,
-    curr_def_level: i16,
-    curr_rep_level: i16,
-    paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
-    batch_size: usize,
-  ) -> Self::Reader;
+    /// Builds tree of readers for the specified schema recursively.
+    fn reader(
+        schema: &Self::Schema,
+        path: &mut Vec<String>,
+        curr_def_level: i16,
+        curr_rep_level: i16,
+        paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
+        batch_size: usize,
+    ) -> Self::Reader;
 }

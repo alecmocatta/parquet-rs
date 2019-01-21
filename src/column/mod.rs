@@ -39,13 +39,13 @@
 //! use std::{fs, path::Path, rc::Rc};
 //!
 //! use parquet::{
-//!   column::{reader::ColumnReader, writer::ColumnWriter},
-//!   file::{
-//!     properties::WriterProperties,
-//!     reader::{FileReader, SerializedFileReader},
-//!     writer::{FileWriter, SerializedFileWriter},
-//!   },
-//!   schema::parser::parse_message_type,
+//!     column::{reader::ColumnReader, writer::ColumnWriter},
+//!     file::{
+//!         properties::WriterProperties,
+//!         reader::{FileReader, SerializedFileReader},
+//!         writer::{FileWriter, SerializedFileWriter},
+//!     },
+//!     schema::parser::parse_message_type,
 //! };
 //!
 //! let path = Path::new("target/debug/examples/column_sample.parquet");
@@ -67,16 +67,16 @@
 //! let mut writer = SerializedFileWriter::new(file, schema, props).unwrap();
 //! let mut row_group_writer = writer.next_row_group().unwrap();
 //! while let Some(mut col_writer) = row_group_writer.next_column().unwrap() {
-//!   match col_writer {
-//!     // You can also use `get_typed_column_writer` method to extract typed writer.
-//!     ColumnWriter::Int32ColumnWriter(ref mut typed_writer) => {
-//!       typed_writer
-//!         .write_batch(&[1, 2, 3], Some(&[3, 3, 3, 2, 2]), Some(&[0, 1, 0, 1, 1]))
-//!         .unwrap();
-//!     },
-//!     _ => {},
-//!   }
-//!   row_group_writer.close_column(col_writer).unwrap();
+//!     match col_writer {
+//!         // You can also use `get_typed_column_writer` method to extract typed writer.
+//!         ColumnWriter::Int32ColumnWriter(ref mut typed_writer) => {
+//!             typed_writer
+//!                 .write_batch(&[1, 2, 3], Some(&[3, 3, 3, 2, 2]), Some(&[0, 1, 0, 1, 1]))
+//!                 .unwrap();
+//!         }
+//!         _ => {}
+//!     }
+//!     row_group_writer.close_column(col_writer).unwrap();
 //! }
 //! writer.close_row_group(row_group_writer).unwrap();
 //! writer.close().unwrap();
@@ -93,24 +93,24 @@
 //! let mut rep_levels = vec![0; 8];
 //!
 //! for i in 0..metadata.num_row_groups() {
-//!   let row_group_reader = reader.get_row_group(i).unwrap();
-//!   let row_group_metadata = metadata.row_group(i);
+//!     let row_group_reader = reader.get_row_group(i).unwrap();
+//!     let row_group_metadata = metadata.row_group(i);
 //!
-//!   for j in 0..row_group_metadata.num_columns() {
-//!     let mut column_reader = row_group_reader.get_column_reader(j).unwrap();
-//!     match column_reader {
-//!       // You can also use `get_typed_column_reader` method to extract typed reader.
-//!       ColumnReader::Int32ColumnReader(ref mut typed_reader) => {
-//!         res = typed_reader.read_batch(
-//!           8, // batch size
-//!           Some(&mut def_levels),
-//!           Some(&mut rep_levels),
-//!           &mut values,
-//!         );
-//!       },
-//!       _ => {},
+//!     for j in 0..row_group_metadata.num_columns() {
+//!         let mut column_reader = row_group_reader.get_column_reader(j).unwrap();
+//!         match column_reader {
+//!             // You can also use `get_typed_column_reader` method to extract typed reader.
+//!             ColumnReader::Int32ColumnReader(ref mut typed_reader) => {
+//!                 res = typed_reader.read_batch(
+//!                     8, // batch size
+//!                     Some(&mut def_levels),
+//!                     Some(&mut rep_levels),
+//!                     &mut values,
+//!                 );
+//!             }
+//!             _ => {}
+//!         }
 //!     }
-//!   }
 //! }
 //!
 //! assert_eq!(res, Ok((3, 5)));

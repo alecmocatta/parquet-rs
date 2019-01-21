@@ -1,202 +1,202 @@
 use std::{collections::HashMap, marker::PhantomData, string::FromUtf8Error};
 
 use crate::{
-  basic::{LogicalType, Repetition, Type as PhysicalType},
-  column::reader::ColumnReader,
-  data_type::{ByteArrayType, FixedLenByteArrayType},
-  errors::ParquetError,
-  record::{
-    reader::{ByteArrayReader, FixedLenByteArrayReader, MapReader},
-    schemas::{ArraySchema, StringSchema, VecSchema},
-    triplet::TypedTripletIter,
-    types::{downcast, Value},
-    Deserialize,
-  },
-  schema::types::{ColumnDescPtr, ColumnPath, Type},
+    basic::{LogicalType, Repetition, Type as PhysicalType},
+    column::reader::ColumnReader,
+    data_type::{ByteArrayType, FixedLenByteArrayType},
+    errors::ParquetError,
+    record::{
+        reader::{ByteArrayReader, FixedLenByteArrayReader, MapReader},
+        schemas::{ArraySchema, StringSchema, VecSchema},
+        triplet::TypedTripletIter,
+        types::{downcast, Value},
+        Deserialize,
+    },
+    schema::types::{ColumnDescPtr, ColumnPath, Type},
 };
 
 impl Deserialize for Vec<u8> {
-  type Reader = ByteArrayReader;
-  type Schema = VecSchema;
+    type Reader = ByteArrayReader;
+    type Schema = VecSchema;
 
-  fn parse(schema: &Type) -> Result<(String, Self::Schema), ParquetError> {
-    Value::parse(schema).and_then(downcast)
-  }
-
-  fn reader(
-    _schema: &Self::Schema,
-    path: &mut Vec<String>,
-    curr_def_level: i16,
-    curr_rep_level: i16,
-    paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
-    batch_size: usize,
-  ) -> Self::Reader
-  {
-    let col_path = ColumnPath::new(path.to_vec());
-    let (col_descr, col_reader) = paths.remove(&col_path).unwrap();
-    assert_eq!(
-      (curr_def_level, curr_rep_level),
-      (col_descr.max_def_level(), col_descr.max_rep_level())
-    );
-    ByteArrayReader {
-      column: TypedTripletIter::<ByteArrayType>::new(
-        curr_def_level,
-        curr_rep_level,
-        batch_size,
-        col_reader,
-      ),
+    fn parse(schema: &Type) -> Result<(String, Self::Schema), ParquetError> {
+        Value::parse(schema).and_then(downcast)
     }
-  }
+
+    fn reader(
+        _schema: &Self::Schema,
+        path: &mut Vec<String>,
+        curr_def_level: i16,
+        curr_rep_level: i16,
+        paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
+        batch_size: usize,
+    ) -> Self::Reader {
+        let col_path = ColumnPath::new(path.to_vec());
+        let (col_descr, col_reader) = paths.remove(&col_path).unwrap();
+        assert_eq!(
+            (curr_def_level, curr_rep_level),
+            (col_descr.max_def_level(), col_descr.max_rep_level())
+        );
+        ByteArrayReader {
+            column: TypedTripletIter::<ByteArrayType>::new(
+                curr_def_level,
+                curr_rep_level,
+                batch_size,
+                col_reader,
+            ),
+        }
+    }
 }
 impl Deserialize for String {
-  // existential type Reader: Reader<Item = Self>;
-  type Reader = MapReader<ByteArrayReader, fn(Vec<u8>) -> Result<Self, ParquetError>>;
-  type Schema = StringSchema;
+    // existential type Reader: Reader<Item = Self>;
+    type Reader = MapReader<ByteArrayReader, fn(Vec<u8>) -> Result<Self, ParquetError>>;
+    type Schema = StringSchema;
 
-  fn parse(schema: &Type) -> Result<(String, Self::Schema), ParquetError> {
-    Value::parse(schema).and_then(downcast)
-  }
+    fn parse(schema: &Type) -> Result<(String, Self::Schema), ParquetError> {
+        Value::parse(schema).and_then(downcast)
+    }
 
-  fn reader(
-    _schema: &Self::Schema,
-    path: &mut Vec<String>,
-    curr_def_level: i16,
-    curr_rep_level: i16,
-    paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
-    batch_size: usize,
-  ) -> Self::Reader
-  {
-    let col_path = ColumnPath::new(path.to_vec());
-    let (col_descr, col_reader) = paths.remove(&col_path).unwrap();
-    assert_eq!(
-      (curr_def_level, curr_rep_level),
-      (col_descr.max_def_level(), col_descr.max_rep_level())
-    );
-    MapReader(
-      ByteArrayReader {
-        column: TypedTripletIter::<ByteArrayType>::new(
-          curr_def_level,
-          curr_rep_level,
-          batch_size,
-          col_reader,
-        ),
-      },
-      (|x| {
-        String::from_utf8(x)
-          .map_err(|err: FromUtf8Error| ParquetError::General(err.to_string()))
-      }) as fn(_) -> _,
-    )
-  }
+    fn reader(
+        _schema: &Self::Schema,
+        path: &mut Vec<String>,
+        curr_def_level: i16,
+        curr_rep_level: i16,
+        paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
+        batch_size: usize,
+    ) -> Self::Reader {
+        let col_path = ColumnPath::new(path.to_vec());
+        let (col_descr, col_reader) = paths.remove(&col_path).unwrap();
+        assert_eq!(
+            (curr_def_level, curr_rep_level),
+            (col_descr.max_def_level(), col_descr.max_rep_level())
+        );
+        MapReader(
+            ByteArrayReader {
+                column: TypedTripletIter::<ByteArrayType>::new(
+                    curr_def_level,
+                    curr_rep_level,
+                    batch_size,
+                    col_reader,
+                ),
+            },
+            (|x| {
+                String::from_utf8(x)
+                    .map_err(|err: FromUtf8Error| ParquetError::General(err.to_string()))
+            }) as fn(_) -> _,
+        )
+    }
 }
 
 macro_rules! impl_parquet_deserialize_array {
-  ($i:tt) => {
-    impl Deserialize for [u8; $i] {
-      // existential type Reader: Reader<Item = Self>;
-      type Reader =
-        MapReader<FixedLenByteArrayReader, fn(Vec<u8>) -> Result<Self, ParquetError>>;
-      type Schema = ArraySchema<Self>;
+    ($i:tt) => {
+        impl Deserialize for [u8; $i] {
+            // existential type Reader: Reader<Item = Self>;
+            type Reader =
+                MapReader<FixedLenByteArrayReader, fn(Vec<u8>) -> Result<Self, ParquetError>>;
+            type Schema = ArraySchema<Self>;
 
-      fn parse(schema: &Type) -> Result<(String, Self::Schema), ParquetError> {
-        if schema.is_primitive()
-          && schema.get_basic_info().repetition() == Repetition::REQUIRED
-          && schema.get_physical_type() == PhysicalType::FIXED_LEN_BYTE_ARRAY
-          && schema.get_basic_info().logical_type() == LogicalType::NONE
-          && schema.get_type_length() == $i
-        {
-          return Ok((schema.name().to_owned(), ArraySchema(PhantomData)));
+            fn parse(schema: &Type) -> Result<(String, Self::Schema), ParquetError> {
+                if schema.is_primitive()
+                    && schema.get_basic_info().repetition() == Repetition::REQUIRED
+                    && schema.get_physical_type() == PhysicalType::FIXED_LEN_BYTE_ARRAY
+                    && schema.get_basic_info().logical_type() == LogicalType::NONE
+                    && schema.get_type_length() == $i
+                {
+                    return Ok((schema.name().to_owned(), ArraySchema(PhantomData)));
+                }
+                Err(ParquetError::General(format!(
+                    "Can't parse array {:?}",
+                    schema
+                )))
+            }
+
+            fn reader(
+                _schema: &Self::Schema,
+                path: &mut Vec<String>,
+                curr_def_level: i16,
+                curr_rep_level: i16,
+                paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
+                batch_size: usize,
+            ) -> Self::Reader {
+                let col_path = ColumnPath::new(path.to_vec());
+                let (col_descr, col_reader) = paths.remove(&col_path).unwrap();
+                assert_eq!(
+                    (curr_def_level, curr_rep_level),
+                    (col_descr.max_def_level(), col_descr.max_rep_level())
+                );
+                MapReader(
+                    FixedLenByteArrayReader {
+                        column: TypedTripletIter::<FixedLenByteArrayType>::new(
+                            curr_def_level,
+                            curr_rep_level,
+                            batch_size,
+                            col_reader,
+                        ),
+                    },
+                    (|bytes: Vec<_>| {
+                        let mut ret = std::mem::MaybeUninit::<Self>::uninitialized();
+                        assert_eq!(bytes.len(), unsafe { ret.get_ref().len() });
+                        unsafe {
+                            std::ptr::copy_nonoverlapping(
+                                bytes.as_ptr(),
+                                ret.get_mut().as_mut_ptr(),
+                                bytes.len(),
+                            )
+                        };
+                        Ok(unsafe { ret.into_inner() })
+                    }) as fn(_) -> _,
+                )
+            }
         }
-        Err(ParquetError::General(format!(
-          "Can't parse array {:?}",
-          schema
-        )))
-      }
+        impl Deserialize for Box<[u8; $i]> {
+            // existential type Reader: Reader<Item = Self>;
+            type Reader =
+                MapReader<FixedLenByteArrayReader, fn(Vec<u8>) -> Result<Self, ParquetError>>;
+            type Schema = ArraySchema<[u8; $i]>;
 
-      fn reader(
-        _schema: &Self::Schema,
-        path: &mut Vec<String>,
-        curr_def_level: i16,
-        curr_rep_level: i16,
-        paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
-        batch_size: usize,
-      ) -> Self::Reader
-      {
-        let col_path = ColumnPath::new(path.to_vec());
-        let (col_descr, col_reader) = paths.remove(&col_path).unwrap();
-        assert_eq!(
-          (curr_def_level, curr_rep_level),
-          (col_descr.max_def_level(), col_descr.max_rep_level())
-        );
-        MapReader(
-          FixedLenByteArrayReader {
-            column: TypedTripletIter::<FixedLenByteArrayType>::new(
-              curr_def_level,
-              curr_rep_level,
-              batch_size,
-              col_reader,
-            ),
-          },
-          (|bytes: Vec<_>| {
-            let mut ret = std::mem::MaybeUninit::<Self>::uninitialized();
-            assert_eq!(bytes.len(), unsafe { ret.get_ref().len() });
-            unsafe {
-              std::ptr::copy_nonoverlapping(
-                bytes.as_ptr(),
-                ret.get_mut().as_mut_ptr(),
-                bytes.len(),
-              )
-            };
-            Ok(unsafe { ret.into_inner() })
-          }) as fn(_) -> _,
-        )
-      }
-    }
-    impl Deserialize for Box<[u8; $i]> {
-      // existential type Reader: Reader<Item = Self>;
-      type Reader =
-        MapReader<FixedLenByteArrayReader, fn(Vec<u8>) -> Result<Self, ParquetError>>;
-      type Schema = ArraySchema<[u8; $i]>;
+            fn parse(schema: &Type) -> Result<(String, Self::Schema), ParquetError> {
+                <[u8; $i]>::parse(schema)
+            }
 
-      fn parse(schema: &Type) -> Result<(String, Self::Schema), ParquetError> {
-        <[u8; $i]>::parse(schema)
-      }
-
-      fn reader(
-        _schema: &Self::Schema,
-        path: &mut Vec<String>,
-        curr_def_level: i16,
-        curr_rep_level: i16,
-        paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
-        batch_size: usize,
-      ) -> Self::Reader
-      {
-        let col_path = ColumnPath::new(path.to_vec());
-        let (col_descr, col_reader) = paths.remove(&col_path).unwrap();
-        assert_eq!(
-          (curr_def_level, curr_rep_level),
-          (col_descr.max_def_level(), col_descr.max_rep_level())
-        );
-        MapReader(
-          FixedLenByteArrayReader {
-            column: TypedTripletIter::<FixedLenByteArrayType>::new(
-              curr_def_level,
-              curr_rep_level,
-              batch_size,
-              col_reader,
-            ),
-          },
-          (|bytes: Vec<_>| {
-            let mut ret = box [0u8; $i];
-            assert_eq!(bytes.len(), ret.len());
-            unsafe {
-              std::ptr::copy_nonoverlapping(bytes.as_ptr(), ret.as_mut_ptr(), bytes.len())
-            };
-            Ok(ret)
-          }) as fn(_) -> _,
-        )
-      }
-    }
-  };
+            fn reader(
+                _schema: &Self::Schema,
+                path: &mut Vec<String>,
+                curr_def_level: i16,
+                curr_rep_level: i16,
+                paths: &mut HashMap<ColumnPath, (ColumnDescPtr, ColumnReader)>,
+                batch_size: usize,
+            ) -> Self::Reader {
+                let col_path = ColumnPath::new(path.to_vec());
+                let (col_descr, col_reader) = paths.remove(&col_path).unwrap();
+                assert_eq!(
+                    (curr_def_level, curr_rep_level),
+                    (col_descr.max_def_level(), col_descr.max_rep_level())
+                );
+                MapReader(
+                    FixedLenByteArrayReader {
+                        column: TypedTripletIter::<FixedLenByteArrayType>::new(
+                            curr_def_level,
+                            curr_rep_level,
+                            batch_size,
+                            col_reader,
+                        ),
+                    },
+                    (|bytes: Vec<_>| {
+                        let mut ret = box [0u8; $i];
+                        assert_eq!(bytes.len(), ret.len());
+                        unsafe {
+                            std::ptr::copy_nonoverlapping(
+                                bytes.as_ptr(),
+                                ret.as_mut_ptr(),
+                                bytes.len(),
+                            )
+                        };
+                        Ok(ret)
+                    }) as fn(_) -> _,
+                )
+            }
+        }
+    };
 }
 
 // Implemented on common array lengths, copied from arrayvec

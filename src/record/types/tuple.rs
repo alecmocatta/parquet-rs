@@ -1,21 +1,21 @@
 use std::{
-  collections::HashMap,
-  fmt::{self, Debug, Display},
-  marker::PhantomData,
-  vec,
+    collections::HashMap,
+    fmt::{self, Debug, Display},
+    marker::PhantomData,
+    vec,
 };
 
 use crate::{
-  basic::Repetition,
-  column::reader::ColumnReader,
-  errors::ParquetError,
-  record::{
-    reader::{Reader, RootReader, TupleReader},
-    schemas::{RootSchema, TupleSchema, ValueSchema},
-    types::{group::Group, Downcast, Root, Value},
-    Deserialize, DisplayType,
-  },
-  schema::types::{ColumnDescPtr, ColumnPath, Type},
+    basic::Repetition,
+    column::reader::ColumnReader,
+    errors::ParquetError,
+    record::{
+        reader::{Reader, RootReader, TupleReader},
+        schemas::{RootSchema, TupleSchema, ValueSchema},
+        types::{group::Group, Downcast, Root, Value},
+        Deserialize, DisplayType,
+    },
+    schema::types::{ColumnDescPtr, ColumnPath, Type},
 };
 
 macro_rules! impl_parquet_deserialize_tuple {
