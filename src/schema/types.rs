@@ -19,8 +19,10 @@
 
 use std::{collections::HashMap, convert::From, fmt, rc::Rc};
 
-use basic::{LogicalType, Repetition, Type as PhysicalType};
-use errors::{ParquetError, Result};
+use crate::{
+  basic::{LogicalType, Repetition, Type as PhysicalType},
+  errors::{ParquetError, Result},
+};
 use parquet_format::SchemaElement;
 
 // ----------------------------------------------------------------------
@@ -1002,7 +1004,7 @@ fn to_thrift_helper(schema: &Type, elements: &mut Vec<SchemaElement>) {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use schema::parser::parse_message_type;
+  use crate::schema::parser::parse_message_type;
   use std::error::Error;
 
   #[test]

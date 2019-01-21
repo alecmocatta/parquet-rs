@@ -26,22 +26,24 @@ use std::{
   rc::Rc,
 };
 
-use basic::{ColumnOrder, Compression, Encoding, Type};
-use byteorder::{ByteOrder, LittleEndian};
-use column::{
-  page::{Page, PageReader},
-  reader::{ColumnReader, ColumnReaderImpl},
+use crate::{
+  basic::{ColumnOrder, Compression, Encoding, Type},
+  column::{
+    page::{Page, PageReader},
+    reader::{ColumnReader, ColumnReaderImpl},
+  },
+  compression::{create_codec, Codec},
+  errors::{ParquetError, Result},
+  file::{metadata::*, statistics, FOOTER_SIZE, PARQUET_MAGIC},
+  record::{reader::RowIter, types::Root, Deserialize},
+  schema::types::{self, SchemaDescriptor, Type as SchemaType},
+  util::{io::FileSource, memory::ByteBufferPtr},
 };
-use compression::{create_codec, Codec};
-use errors::{ParquetError, Result};
-use file::{metadata::*, statistics, FOOTER_SIZE, PARQUET_MAGIC};
+use byteorder::{ByteOrder, LittleEndian};
 use parquet_format::{
   ColumnOrder as TColumnOrder, FileMetaData as TFileMetaData, PageHeader, PageType,
 };
-use record::{reader::RowIter, types::Root, Deserialize};
-use schema::types::{self, SchemaDescriptor, Type as SchemaType};
 use thrift::protocol::TCompactInputProtocol;
-use util::{io::FileSource, memory::ByteBufferPtr};
 
 // ----------------------------------------------------------------------
 // APIs for file & row group readers
@@ -532,10 +534,12 @@ impl<T: Read> PageReader for SerializedPageReader<T> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use basic::SortOrder;
+  use crate::{
+    basic::SortOrder,
+    record::types::Row,
+    util::test_common::{get_temp_file, get_test_file, get_test_path},
+  };
   use parquet_format::TypeDefinedOrder;
-  use record::types::Row;
-  use util::test_common::{get_temp_file, get_test_file, get_test_path};
 
   #[test]
   fn test_file_reader_metadata_size_smaller_than_footer() {

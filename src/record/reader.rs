@@ -27,14 +27,16 @@ use super::{
   types::{Group, List, Map, Root, Timestamp, Value},
   Deserialize, DisplayDisplayType,
 };
-use column::reader::ColumnReader;
-use data_type::{
-  BoolType, ByteArrayType, DoubleType, FixedLenByteArrayType, FloatType, Int32Type,
-  Int64Type, Int96, Int96Type,
+use crate::{
+  column::reader::ColumnReader,
+  data_type::{
+    BoolType, ByteArrayType, DoubleType, FixedLenByteArrayType, FloatType, Int32Type,
+    Int64Type, Int96, Int96Type,
+  },
+  errors::{ParquetError, Result},
+  file::reader::{FileReader, RowGroupReader},
+  schema::types::{ColumnDescPtr, ColumnPath, SchemaDescPtr, SchemaDescriptor, Type},
 };
-use errors::{ParquetError, Result};
-use file::reader::{FileReader, RowGroupReader};
-use schema::types::{ColumnDescPtr, ColumnPath, SchemaDescPtr, SchemaDescriptor, Type};
 
 /// Default batch size for a reader
 const DEFAULT_BATCH_SIZE: usize = 1024;
@@ -844,11 +846,13 @@ where Root<T>: Deserialize
 #[cfg(test)]
 mod tests {
   use super::*;
-  use errors::Result;
-  use file::reader::{FileReader, SerializedFileReader};
-  use record::types::{Row, Value};
-  use schema::parser::parse_message_type;
-  use util::test_common::get_test_file;
+  use crate::{
+    errors::Result,
+    file::reader::{FileReader, SerializedFileReader},
+    record::types::{Row, Value},
+    schema::parser::parse_message_type,
+    util::test_common::get_test_file,
+  };
 
   // Convenient macros to assemble row, list, map, and group.
 

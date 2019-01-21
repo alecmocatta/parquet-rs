@@ -9,8 +9,7 @@ use super::{
   types::{Downcast, Root},
   Deserialize, DisplayDisplayType, DisplayType,
 };
-use errors::ParquetError;
-use schema::parser::parse_message_type;
+use crate::{errors::ParquetError, schema::parser::parse_message_type};
 
 #[derive(Debug)]
 pub struct BoolSchema;

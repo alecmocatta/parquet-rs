@@ -6,15 +6,17 @@ use std::{
   vec,
 };
 
-use basic::{LogicalType, Repetition};
-use column::reader::ColumnReader;
-use errors::ParquetError;
-use record::{
-  reader::{MapReader, RepeatedReader},
-  schemas::{ListSchema, ListSchemaType},
-  Deserialize,
+use crate::{
+  basic::{LogicalType, Repetition},
+  column::reader::ColumnReader,
+  errors::ParquetError,
+  record::{
+    reader::{MapReader, RepeatedReader},
+    schemas::{ListSchema, ListSchemaType},
+    Deserialize,
+  },
+  schema::types::{ColumnDescPtr, ColumnPath, Type},
 };
-use schema::types::{ColumnDescPtr, ColumnPath, Type};
 
 /// Returns true if repeated type is an element type for the list.
 /// Used to determine legacy list types.

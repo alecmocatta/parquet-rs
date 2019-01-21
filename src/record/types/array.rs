@@ -1,17 +1,19 @@
 use std::{collections::HashMap, marker::PhantomData, string::FromUtf8Error};
 
-use basic::{LogicalType, Repetition, Type as PhysicalType};
-use column::reader::ColumnReader;
-use data_type::{ByteArrayType, FixedLenByteArrayType};
-use errors::ParquetError;
-use record::{
-  reader::{ByteArrayReader, FixedLenByteArrayReader, MapReader},
-  schemas::{ArraySchema, StringSchema, VecSchema},
-  triplet::TypedTripletIter,
-  types::{downcast, Value},
-  Deserialize,
+use crate::{
+  basic::{LogicalType, Repetition, Type as PhysicalType},
+  column::reader::ColumnReader,
+  data_type::{ByteArrayType, FixedLenByteArrayType},
+  errors::ParquetError,
+  record::{
+    reader::{ByteArrayReader, FixedLenByteArrayReader, MapReader},
+    schemas::{ArraySchema, StringSchema, VecSchema},
+    triplet::TypedTripletIter,
+    types::{downcast, Value},
+    Deserialize,
+  },
+  schema::types::{ColumnDescPtr, ColumnPath, Type},
 };
-use schema::types::{ColumnDescPtr, ColumnPath, Type};
 
 impl Deserialize for Vec<u8> {
   type Reader = ByteArrayReader;

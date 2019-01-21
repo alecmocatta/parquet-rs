@@ -24,7 +24,7 @@ use test::Bencher;
 #[allow(dead_code)]
 #[path = "common.rs"]
 mod common;
-use common::*;
+use crate::common::*;
 
 use std::rc::Rc;
 

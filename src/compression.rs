@@ -42,9 +42,11 @@
 
 use std::io::{self, Read, Write};
 
-use basic::Compression as CodecType;
+use crate::{
+  basic::Compression as CodecType,
+  errors::{ParquetError, Result},
+};
 use brotli;
-use errors::{ParquetError, Result};
 use flate2::{read, write, Compression};
 use lz4;
 use snap::{decompress_len, max_compress_len, Decoder, Encoder};
@@ -241,7 +243,7 @@ impl Codec for ZSTDCodec {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use util::test_common::*;
+  use crate::util::test_common::*;
 
   fn test_roundtrip(c: CodecType, data: &Vec<u8>) {
     let mut c1 = create_codec(c).unwrap().unwrap();

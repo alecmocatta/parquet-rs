@@ -8,16 +8,18 @@ use std::{
   str, vec,
 };
 
-use basic::Repetition;
-use column::reader::ColumnReader;
-use errors::ParquetError;
-use record::{
-  reader::{GroupReader, RootReader},
-  schemas::{GroupSchema, RootSchema, ValueSchema},
-  types::{Root, Value},
-  Deserialize,
+use crate::{
+  basic::Repetition,
+  column::reader::ColumnReader,
+  errors::ParquetError,
+  record::{
+    reader::{GroupReader, RootReader},
+    schemas::{GroupSchema, RootSchema, ValueSchema},
+    types::{Root, Value},
+    Deserialize,
+  },
+  schema::types::{ColumnDescPtr, ColumnPath, Type},
 };
-use schema::types::{ColumnDescPtr, ColumnPath, Type};
 
 #[derive(Clone, PartialEq)]
 pub struct Group(pub(crate) Vec<Value>, pub(crate) Rc<HashMap<String, usize>>);

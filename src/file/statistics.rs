@@ -39,9 +39,8 @@
 
 use std::{cmp, fmt, ptr};
 
-use basic::Type;
+use crate::{basic::Type, data_type::*};
 use byteorder::{ByteOrder, LittleEndian};
-use data_type::*;
 use parquet_format::Statistics as TStatistics;
 
 // Macro to generate methods create Statistics.

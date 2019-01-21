@@ -21,8 +21,7 @@ use rand::{
 };
 use std::{env, fs, io::Write, path};
 
-use data_type::*;
-use util::memory::ByteBufferPtr;
+use crate::{data_type::*, util::memory::ByteBufferPtr};
 
 /// Random generator of data type `T` values and sequences.
 pub trait RandGen<T: DataType> {

@@ -17,7 +17,7 @@
 
 use std::ptr;
 
-use data_type::AsBytes;
+use crate::data_type::AsBytes;
 
 /// Computes hash value for `data`, with a seed value `seed`.
 /// The data type `T` must implement the `AsBytes` trait.

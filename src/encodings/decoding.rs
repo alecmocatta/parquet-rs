@@ -20,15 +20,17 @@
 use std::{cmp, marker::PhantomData, mem, slice::from_raw_parts_mut};
 
 use super::rle::RleDecoder;
-use basic::*;
-use byteorder::{ByteOrder, LittleEndian};
-use data_type::*;
-use errors::{ParquetError, Result};
-use schema::types::ColumnDescPtr;
-use util::{
-  bit_util::BitReader,
-  memory::{ByteBuffer, ByteBufferPtr},
+use crate::{
+  basic::*,
+  data_type::*,
+  errors::{ParquetError, Result},
+  schema::types::ColumnDescPtr,
+  util::{
+    bit_util::BitReader,
+    memory::{ByteBuffer, ByteBufferPtr},
+  },
 };
+use byteorder::{ByteOrder, LittleEndian};
 
 // ----------------------------------------------------------------------
 // Decoders
@@ -835,9 +837,11 @@ impl Decoder<FixedLenByteArrayType> for DeltaByteArrayDecoder<FixedLenByteArrayT
 #[cfg(test)]
 mod tests {
   use super::{super::encoding::*, *};
-  use schema::types::{ColumnDescPtr, ColumnDescriptor, ColumnPath, Type as SchemaType};
+  use crate::{
+    schema::types::{ColumnDescPtr, ColumnDescriptor, ColumnPath, Type as SchemaType},
+    util::{bit_util::set_array_bit, memory::MemTracker, test_common::RandGen},
+  };
   use std::{mem, rc::Rc};
-  use util::{bit_util::set_array_bit, memory::MemTracker, test_common::RandGen};
 
   #[test]
   fn test_get_decoders() {

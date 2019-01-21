@@ -46,11 +46,13 @@
 
 use std::{fmt, io};
 
-use basic::{LogicalType, Type as PhysicalType};
-use file::metadata::{
-  ColumnChunkMetaData, FileMetaData, ParquetMetaData, RowGroupMetaData,
+use crate::{
+  basic::{LogicalType, Type as PhysicalType},
+  file::metadata::{
+    ColumnChunkMetaData, FileMetaData, ParquetMetaData, RowGroupMetaData,
+  },
+  schema::types::Type,
 };
-use schema::types::Type;
 
 /// Prints Parquet metadata [`ParquetMetaData`](`::file::metadata::ParquetMetaData`)
 /// information.
@@ -258,8 +260,10 @@ mod tests {
   use std::rc::Rc;
 
   use super::*;
-  use basic::{Repetition, Type as PhysicalType};
-  use schema::{parser::parse_message_type, types::Type};
+  use crate::{
+    basic::{Repetition, Type as PhysicalType},
+    schema::{parser::parse_message_type, types::Type},
+  };
 
   fn assert_print_parse_message(message: Type) {
     let mut s = String::new();

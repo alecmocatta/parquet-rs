@@ -1,21 +1,23 @@
 use std::{collections::HashMap, marker::PhantomData};
 
-use column::reader::ColumnReader;
-use data_type::{BoolType, DoubleType, FloatType, Int32Type, Int64Type};
-use errors::ParquetError;
-use record::{
-  reader::{
-    BoolReader, F32Reader, F64Reader, I32Reader, I64Reader, MapReader, TryIntoReader,
+use crate::{
+  column::reader::ColumnReader,
+  data_type::{BoolType, DoubleType, FloatType, Int32Type, Int64Type},
+  errors::ParquetError,
+  record::{
+    reader::{
+      BoolReader, F32Reader, F64Reader, I32Reader, I64Reader, MapReader, TryIntoReader,
+    },
+    schemas::{
+      BoolSchema, F32Schema, F64Schema, I16Schema, I32Schema, I64Schema, I8Schema,
+      U16Schema, U32Schema, U64Schema, U8Schema,
+    },
+    triplet::TypedTripletIter,
+    types::{downcast, Value},
+    Deserialize,
   },
-  schemas::{
-    BoolSchema, F32Schema, F64Schema, I16Schema, I32Schema, I64Schema, I8Schema,
-    U16Schema, U32Schema, U64Schema, U8Schema,
-  },
-  triplet::TypedTripletIter,
-  types::{downcast, Value},
-  Deserialize,
+  schema::types::{ColumnDescPtr, ColumnPath, Type},
 };
-use schema::types::{ColumnDescPtr, ColumnPath, Type};
 
 impl Deserialize for bool {
   type Reader = BoolReader;

@@ -47,8 +47,10 @@
 
 use std::{collections::HashMap, rc::Rc};
 
-use basic::{Compression, Encoding};
-use schema::types::ColumnPath;
+use crate::{
+  basic::{Compression, Encoding},
+  schema::types::ColumnPath,
+};
 
 const DEFAULT_PAGE_SIZE: usize = 1024 * 1024;
 const DEFAULT_WRITE_BATCH_SIZE: usize = 1024;

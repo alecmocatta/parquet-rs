@@ -4,15 +4,17 @@ use std::{
   hash::Hash,
 };
 
-use basic::{LogicalType, Repetition};
-use column::reader::ColumnReader;
-use errors::ParquetError;
-use record::{
-  reader::{KeyValueReader, MapReader},
-  schemas::MapSchema,
-  Deserialize,
+use crate::{
+  basic::{LogicalType, Repetition},
+  column::reader::ColumnReader,
+  errors::ParquetError,
+  record::{
+    reader::{KeyValueReader, MapReader},
+    schemas::MapSchema,
+    Deserialize,
+  },
+  schema::types::{ColumnDescPtr, ColumnPath, Type},
 };
-use schema::types::{ColumnDescPtr, ColumnPath, Type};
 
 // https://github.com/apache/parquet-format/blob/master/LogicalTypes.md#backward-compatibility-rules
 pub(super) fn parse_map<K: Deserialize, V: Deserialize>(

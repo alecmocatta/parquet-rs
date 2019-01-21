@@ -4,20 +4,22 @@ use std::{
   hash::{Hash, Hasher},
 };
 
-use basic::{LogicalType, Repetition, Type as PhysicalType};
-use column::reader::ColumnReader;
-use errors::ParquetError;
-use record::{
-  reader::ValueReader,
-  schemas::{
-    BoolSchema, F32Schema, F64Schema, GroupSchema, I16Schema, I32Schema, I64Schema,
-    I8Schema, ListSchema, ListSchemaType, OptionSchema, StringSchema, TimestampSchema,
-    U16Schema, U32Schema, U64Schema, U8Schema, ValueSchema, VecSchema,
+use crate::{
+  basic::{LogicalType, Repetition, Type as PhysicalType},
+  column::reader::ColumnReader,
+  errors::ParquetError,
+  record::{
+    reader::ValueReader,
+    schemas::{
+      BoolSchema, F32Schema, F64Schema, GroupSchema, I16Schema, I32Schema, I64Schema,
+      I8Schema, ListSchema, ListSchemaType, OptionSchema, StringSchema, TimestampSchema,
+      U16Schema, U32Schema, U64Schema, U8Schema, ValueSchema, VecSchema,
+    },
+    types::{list::parse_list, map::parse_map, Downcast, Group, List, Map, Timestamp},
+    Deserialize,
   },
-  types::{list::parse_list, map::parse_map, Downcast, Group, List, Map, Timestamp},
-  Deserialize,
+  schema::types::{ColumnDescPtr, ColumnPath, Type},
 };
-use schema::types::{ColumnDescPtr, ColumnPath, Type};
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Value {

@@ -17,8 +17,8 @@
 
 //! Contains Row enum that is used to represent record in Rust.
 
+use crate::data_type::Decimal;
 use chrono::{Local, TimeZone};
-use data_type::Decimal;
 use num_bigint::{BigInt, Sign};
 
 /// Macro as a shortcut to generate 'not yet implemented' panic error.
@@ -668,8 +668,8 @@ mod tests {
   use std::rc::Rc;
 
   use super::*;
+  use crate::schema::types::{ColumnDescriptor, ColumnPath, PrimitiveTypeBuilder};
   use chrono;
-  use schema::types::{ColumnDescriptor, ColumnPath, PrimitiveTypeBuilder};
 
   /// Creates test column descriptor based on provided type parameters.
   macro_rules! make_column_descr {

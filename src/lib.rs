@@ -123,32 +123,15 @@
 //! - Arrow API (_TODO_)
 //! - High level API for writing records (_TODO_)
 
-#![feature(type_ascription)]
-#![feature(rustc_private)]
 #![feature(specialization)]
 #![feature(try_from)]
 #![feature(box_syntax)]
 #![feature(maybe_uninit)]
-#![feature(nll)]
 #![allow(dead_code)]
 #![allow(non_camel_case_types)]
 
 #[macro_use]
 extern crate quick_error;
-extern crate arena;
-extern crate brotli;
-extern crate byteorder;
-extern crate chrono;
-extern crate flate2;
-extern crate lz4;
-extern crate num_bigint;
-extern crate parquet_format;
-extern crate snap;
-extern crate thrift;
-extern crate zstd;
-
-#[cfg(test)]
-extern crate rand;
 
 #[macro_use]
 pub mod errors;
@@ -156,8 +139,10 @@ pub mod basic;
 pub mod data_type;
 
 // Exported for external use, such as benchmarks
-pub use encodings::{decoding, encoding};
-pub use util::memory;
+pub use crate::{
+  encodings::{decoding, encoding},
+  util::memory,
+};
 
 #[macro_use]
 mod util;

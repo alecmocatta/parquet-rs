@@ -18,9 +18,11 @@
 //! Data types that connect Parquet physical types with their Rust-specific
 //! representations.
 
-use basic::Type;
+use crate::{
+  basic::Type,
+  util::memory::{ByteBuffer, ByteBufferPtr},
+};
 use byteorder::{BigEndian, ByteOrder};
-use util::memory::{ByteBuffer, ByteBufferPtr};
 
 /// Rust representation for logical type INT96, value is backed by an array of `u32`.
 /// The type only takes 12 bytes, without extra padding.

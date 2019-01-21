@@ -20,10 +20,12 @@ use std::{
   mem::{size_of, transmute_copy},
 };
 
-use errors::{ParquetError, Result};
-use util::{
-  bit_util::{self, BitReader, BitWriter},
-  memory::ByteBufferPtr,
+use crate::{
+  errors::{ParquetError, Result},
+  util::{
+    bit_util::{self, BitReader, BitWriter},
+    memory::ByteBufferPtr,
+  },
 };
 
 /// Rle/Bit-Packing Hybrid Encoding
@@ -507,12 +509,12 @@ impl RleDecoder {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use crate::util::memory::ByteBufferPtr;
   use rand::{
     self,
     distributions::{Distribution, Standard},
     thread_rng, Rng, SeedableRng,
   };
-  use util::memory::ByteBufferPtr;
 
   const MAX_WIDTH: usize = 32;
 

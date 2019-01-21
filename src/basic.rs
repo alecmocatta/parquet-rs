@@ -20,7 +20,7 @@
 
 use std::{convert, fmt, result, str};
 
-use errors::ParquetError;
+use crate::errors::ParquetError;
 use parquet_format as parquet;
 
 // ----------------------------------------------------------------------

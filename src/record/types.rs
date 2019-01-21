@@ -10,7 +10,7 @@ mod tuple;
 mod value;
 
 use super::schemas::ValueSchema;
-use errors::ParquetError;
+use crate::errors::ParquetError;
 
 pub use self::{
   array::*, decimal::*, group::*, list::*, map::*, numbers::*, option::*, time::*,

@@ -1,16 +1,18 @@
 use std::{collections::HashMap, convert::TryInto, error::Error, num::TryFromIntError};
 
-use column::reader::ColumnReader;
-use data_type::{Int64Type, Int96, Int96Type};
-use errors::ParquetError;
-use record::{
-  reader::{I64Reader, I96Reader, MapReader},
-  schemas::TimestampSchema,
-  triplet::TypedTripletIter,
-  types::{downcast, Value},
-  Deserialize,
+use crate::{
+  column::reader::ColumnReader,
+  data_type::{Int64Type, Int96, Int96Type},
+  errors::ParquetError,
+  record::{
+    reader::{I64Reader, I96Reader, MapReader},
+    schemas::TimestampSchema,
+    triplet::TypedTripletIter,
+    types::{downcast, Value},
+    Deserialize,
+  },
+  schema::types::{ColumnDescPtr, ColumnPath, Type},
 };
-use schema::types::{ColumnDescPtr, ColumnPath, Type};
 
 const JULIAN_DAY_OF_EPOCH: i64 = 2_440_588;
 const SECONDS_PER_DAY: i64 = 86_400;

@@ -1,10 +1,12 @@
 use std::collections::HashMap;
 
-use basic::Repetition;
-use column::reader::ColumnReader;
-use errors::ParquetError;
-use record::{reader::OptionReader, schemas::OptionSchema, Deserialize};
-use schema::types::{ColumnDescPtr, ColumnPath, Type};
+use crate::{
+  basic::Repetition,
+  column::reader::ColumnReader,
+  errors::ParquetError,
+  record::{reader::OptionReader, schemas::OptionSchema, Deserialize},
+  schema::types::{ColumnDescPtr, ColumnPath, Type},
+};
 
 impl<T> Deserialize for Option<T>
 where T: Deserialize

@@ -29,6 +29,7 @@ build = "build.rs"
 homepage = "https://github.com/sunchao/parquet-rs"
 repository = "https://github.com/sunchao/parquet-rs"
 keywords = ["parquet", "hadoop"]
+edition = "2018"
 
 [dependencies]
 parquet-format = "2.5.0"

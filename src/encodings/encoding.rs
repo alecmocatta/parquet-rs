@@ -19,15 +19,17 @@
 
 use std::{cmp, io::Write, marker::PhantomData, mem, slice};
 
-use basic::*;
-use data_type::*;
-use encodings::rle::RleEncoder;
-use errors::{ParquetError, Result};
-use schema::types::ColumnDescPtr;
-use util::{
-  bit_util::{log2, num_required_bits, BitWriter},
-  hash_util,
-  memory::{Buffer, ByteBuffer, ByteBufferPtr, MemTrackerPtr},
+use crate::{
+  basic::*,
+  data_type::*,
+  encodings::rle::RleEncoder,
+  errors::{ParquetError, Result},
+  schema::types::ColumnDescPtr,
+  util::{
+    bit_util::{log2, num_required_bits, BitWriter},
+    hash_util,
+    memory::{Buffer, ByteBuffer, ByteBufferPtr, MemTrackerPtr},
+  },
 };
 
 // ----------------------------------------------------------------------
@@ -951,9 +953,11 @@ impl Encoder<FixedLenByteArrayType> for DeltaByteArrayEncoder<FixedLenByteArrayT
 #[cfg(test)]
 mod tests {
   use super::{super::decoding::*, *};
-  use schema::types::{ColumnDescPtr, ColumnDescriptor, ColumnPath, Type as SchemaType};
+  use crate::{
+    schema::types::{ColumnDescPtr, ColumnDescriptor, ColumnPath, Type as SchemaType},
+    util::{memory::MemTracker, test_common::RandGen},
+  };
   use std::rc::Rc;
-  use util::{memory::MemTracker, test_common::RandGen};
 
   const TEST_SET_SIZE: usize = 1024;
 

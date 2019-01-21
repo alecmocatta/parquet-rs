@@ -5,16 +5,18 @@ use std::{
   vec,
 };
 
-use basic::Repetition;
-use column::reader::ColumnReader;
-use errors::ParquetError;
-use record::{
-  reader::{Reader, RootReader, TupleReader},
-  schemas::{RootSchema, TupleSchema, ValueSchema},
-  types::{group::Group, Downcast, Root, Value},
-  Deserialize, DisplayType,
+use crate::{
+  basic::Repetition,
+  column::reader::ColumnReader,
+  errors::ParquetError,
+  record::{
+    reader::{Reader, RootReader, TupleReader},
+    schemas::{RootSchema, TupleSchema, ValueSchema},
+    types::{group::Group, Downcast, Root, Value},
+    Deserialize, DisplayType,
+  },
+  schema::types::{ColumnDescPtr, ColumnPath, Type},
 };
-use schema::types::{ColumnDescPtr, ColumnPath, Type};
 
 macro_rules! impl_parquet_deserialize_tuple {
   ($($t:ident $i:tt)*) => (

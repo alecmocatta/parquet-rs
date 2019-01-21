@@ -20,8 +20,10 @@ use std::{
   mem::{size_of, transmute_copy},
 };
 
-use errors::{ParquetError, Result};
-use util::{bit_packing::unpack32, memory::ByteBufferPtr};
+use crate::{
+  errors::{ParquetError, Result},
+  util::{bit_packing::unpack32, memory::ByteBufferPtr},
+};
 
 /// Reads `$size` of bytes from `$src`, and reinterprets them as type `$ty`, in
 /// little-endian order. `$ty` must implement the `Default` trait. Otherwise this won't

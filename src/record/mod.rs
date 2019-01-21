@@ -23,14 +23,17 @@ pub mod schemas;
 mod triplet;
 pub mod types;
 
-use column::reader::ColumnReader;
-use errors::ParquetError;
-use record::reader::Reader;
-use schema::types::{ColumnDescPtr, ColumnPath, Type};
 use std::{
   collections::HashMap,
   fmt::{self, Display},
   marker::PhantomData,
+};
+
+use crate::{
+  column::reader::ColumnReader,
+  errors::ParquetError,
+  record::reader::Reader,
+  schema::types::{ColumnDescPtr, ColumnPath, Type},
 };
 
 pub trait DisplayType {

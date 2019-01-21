@@ -24,15 +24,17 @@ use std::{
 };
 
 use super::page::{Page, PageReader};
-use basic::*;
-use data_type::*;
-use encodings::{
-  decoding::{get_decoder, Decoder, DictDecoder, PlainDecoder},
-  levels::LevelDecoder,
+use crate::{
+  basic::*,
+  data_type::*,
+  encodings::{
+    decoding::{get_decoder, Decoder, DictDecoder, PlainDecoder},
+    levels::LevelDecoder,
+  },
+  errors::{ParquetError, Result},
+  schema::types::ColumnDescPtr,
+  util::memory::ByteBufferPtr,
 };
-use errors::{ParquetError, Result};
-use schema::types::ColumnDescPtr;
-use util::memory::ByteBufferPtr;
 
 /// Column reader for a Parquet type.
 pub enum ColumnReader {
@@ -494,16 +496,18 @@ mod tests {
   use rand::distributions::range::SampleRange;
   use std::{collections::VecDeque, rc::Rc, vec::IntoIter};
 
-  use basic::Type as PhysicalType;
-  use column::page::Page;
-  use encodings::{
-    encoding::{get_encoder, DictEncoder, Encoder},
-    levels::{max_buffer_size, LevelEncoder},
-  };
-  use schema::types::{ColumnDescriptor, ColumnPath, Type as SchemaType};
-  use util::{
-    memory::{ByteBufferPtr, MemTracker, MemTrackerPtr},
-    test_common::random_numbers_range,
+  use crate::{
+    basic::Type as PhysicalType,
+    column::page::Page,
+    encodings::{
+      encoding::{get_encoder, DictEncoder, Encoder},
+      levels::{max_buffer_size, LevelEncoder},
+    },
+    schema::types::{ColumnDescriptor, ColumnPath, Type as SchemaType},
+    util::{
+      memory::{ByteBufferPtr, MemTracker, MemTrackerPtr},
+      test_common::random_numbers_range,
+    },
   };
 
   const NUM_LEVELS: usize = 128;

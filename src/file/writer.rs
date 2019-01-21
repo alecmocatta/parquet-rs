@@ -24,21 +24,23 @@ use std::{
   rc::Rc,
 };
 
-use basic::PageType;
+use crate::{
+  basic::PageType,
+  column::{
+    page::{CompressedPage, Page, PageWriteSpec, PageWriter},
+    writer::{get_column_writer, ColumnWriter},
+  },
+  errors::{ParquetError, Result},
+  file::{
+    metadata::*, properties::WriterPropertiesPtr,
+    statistics::to_thrift as statistics_to_thrift, FOOTER_SIZE, PARQUET_MAGIC,
+  },
+  schema::types::{self, SchemaDescPtr, SchemaDescriptor, TypePtr},
+  util::io::{FileSink, Position},
+};
 use byteorder::{ByteOrder, LittleEndian};
-use column::{
-  page::{CompressedPage, Page, PageWriteSpec, PageWriter},
-  writer::{get_column_writer, ColumnWriter},
-};
-use errors::{ParquetError, Result};
-use file::{
-  metadata::*, properties::WriterPropertiesPtr,
-  statistics::to_thrift as statistics_to_thrift, FOOTER_SIZE, PARQUET_MAGIC,
-};
 use parquet_format as parquet;
-use schema::types::{self, SchemaDescPtr, SchemaDescriptor, TypePtr};
 use thrift::protocol::{TCompactOutputProtocol, TOutputProtocol};
-use util::io::{FileSink, Position};
 
 // ----------------------------------------------------------------------
 // APIs for file & row group writers
@@ -519,16 +521,18 @@ mod tests {
   use std::{error::Error, io::Cursor};
 
   use super::*;
-  use basic::{Compression, Encoding, Repetition, Type};
-  use column::page::PageReader;
-  use compression::{create_codec, Codec};
-  use file::{
-    properties::WriterProperties,
-    reader::{FileReader, SerializedFileReader, SerializedPageReader},
-    statistics::{from_thrift, to_thrift, Statistics},
+  use crate::{
+    basic::{Compression, Encoding, Repetition, Type},
+    column::page::PageReader,
+    compression::{create_codec, Codec},
+    file::{
+      properties::WriterProperties,
+      reader::{FileReader, SerializedFileReader, SerializedPageReader},
+      statistics::{from_thrift, to_thrift, Statistics},
+    },
+    record::types::Row,
+    util::{memory::ByteBufferPtr, test_common::get_temp_file},
   };
-  use record::types::Row;
-  use util::{memory::ByteBufferPtr, test_common::get_temp_file};
 
   #[test]
   fn test_file_writer_error_after_close() {

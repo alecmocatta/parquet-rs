@@ -19,21 +19,23 @@
 
 use std::{cmp, collections::VecDeque, mem, rc::Rc};
 
-use basic::{Compression, Encoding, PageType, Type};
-use column::page::{CompressedPage, Page, PageWriteSpec, PageWriter};
-use compression::{create_codec, Codec};
-use data_type::*;
-use encodings::{
-  encoding::{get_encoder, DictEncoder, Encoder},
-  levels::{max_buffer_size, LevelEncoder},
+use crate::{
+  basic::{Compression, Encoding, PageType, Type},
+  column::page::{CompressedPage, Page, PageWriteSpec, PageWriter},
+  compression::{create_codec, Codec},
+  data_type::*,
+  encodings::{
+    encoding::{get_encoder, DictEncoder, Encoder},
+    levels::{max_buffer_size, LevelEncoder},
+  },
+  errors::{ParquetError, Result},
+  file::{
+    metadata::ColumnChunkMetaData,
+    properties::{WriterPropertiesPtr, WriterVersion},
+  },
+  schema::types::ColumnDescPtr,
+  util::memory::{ByteBufferPtr, MemTracker},
 };
-use errors::{ParquetError, Result};
-use file::{
-  metadata::ColumnChunkMetaData,
-  properties::{WriterPropertiesPtr, WriterVersion},
-};
-use schema::types::ColumnDescPtr;
-use util::memory::{ByteBufferPtr, MemTracker};
 
 /// Column writer for a Parquet type.
 pub enum ColumnWriter {
@@ -712,20 +714,22 @@ mod tests {
   use super::*;
   use rand::distributions::range::SampleRange;
 
-  use column::{
-    page::PageReader,
-    reader::{get_column_reader, get_typed_column_reader, ColumnReaderImpl},
+  use crate::{
+    column::{
+      page::PageReader,
+      reader::{get_column_reader, get_typed_column_reader, ColumnReaderImpl},
+    },
+    file::{
+      properties::WriterProperties, reader::SerializedPageReader,
+      writer::SerializedPageWriter,
+    },
+    schema::types::{ColumnDescriptor, ColumnPath, Type as SchemaType},
+    util::{
+      io::{FileSink, FileSource},
+      test_common::{get_temp_file, random_numbers_range},
+    },
   };
-  use file::{
-    properties::WriterProperties, reader::SerializedPageReader,
-    writer::SerializedPageWriter,
-  };
-  use schema::types::{ColumnDescriptor, ColumnPath, Type as SchemaType};
   use std::error::Error;
-  use util::{
-    io::{FileSink, FileSource},
-    test_common::{get_temp_file, random_numbers_range},
-  };
 
   #[test]
   fn test_column_writer_inconsistent_def_rep_length() {
