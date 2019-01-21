@@ -44,13 +44,6 @@
 //!
 //! Note that `parquet-read` reads full file schema, no projection or filtering is
 //! applied.
-//!
-//! For example,
-//! ```
-//! parquet-read data/alltypes_plain.snappy.parquet
-//!
-//! parquet-read data/alltypes_plain.snappy.parquet 4
-//! ```
 
 extern crate parquet;
 

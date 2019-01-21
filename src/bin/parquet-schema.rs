@@ -41,14 +41,6 @@
 //! where `file-path` is the path to a Parquet file and `verbose` is the optional boolean
 //! flag that allows to print schema only, when set to `false` (default behaviour when
 //! not provided), or print full file metadata, when set to `true`.
-//! For example,
-//! ```
-//! parquet-schema data/alltypes_plain.snappy.parquet
-//!
-//! parquet-schema data/alltypes_plain.snappy.parquet false
-//!
-//! parquet-schema data/alltypes_plain.snappy.parquet true
-//! ```
 
 extern crate parquet;
 

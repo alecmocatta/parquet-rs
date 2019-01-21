@@ -35,16 +35,15 @@
 
 use std::rc::Rc;
 
-use super::statistics::{self, Statistics};
-use crate::{
-    basic::{ColumnOrder, Compression, Encoding, Type},
-    errors::{ParquetError, Result},
-    schema::types::{
-        ColumnDescPtr, ColumnDescriptor, ColumnPath, SchemaDescPtr, SchemaDescriptor,
-        Type as SchemaType, TypePtr,
-    },
-};
 use parquet_format::{ColumnChunk, ColumnMetaData, RowGroup};
+
+use crate::basic::{ColumnOrder, Compression, Encoding, Type};
+use crate::errors::{ParquetError, Result};
+use crate::file::statistics::{self, Statistics};
+use crate::schema::types::{
+    ColumnDescPtr, ColumnDescriptor, ColumnPath, SchemaDescPtr, SchemaDescriptor,
+    Type as SchemaType, TypePtr,
+};
 
 /// Reference counted pointer for [`ParquetMetaData`].
 pub type ParquetMetaDataPtr = Rc<ParquetMetaData>;

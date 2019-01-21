@@ -131,6 +131,7 @@ impl<'a> Position for Cursor<&'a mut Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use crate::util::test_common::{get_temp_file, get_test_file};
 
     #[test]

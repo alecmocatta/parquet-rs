@@ -665,11 +665,11 @@ fn convert_decimal_to_string(decimal: &Decimal) -> String {
 
 #[cfg(test)]
 mod tests {
-    use std::rc::Rc;
-
     use super::*;
-    use crate::schema::types::{ColumnDescriptor, ColumnPath, PrimitiveTypeBuilder};
+
     use chrono;
+
+    use crate::schema::types::{ColumnDescriptor, ColumnPath, PrimitiveTypeBuilder};
 
     /// Creates test column descriptor based on provided type parameters.
     macro_rules! make_column_descr {

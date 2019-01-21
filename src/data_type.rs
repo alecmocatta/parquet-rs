@@ -18,11 +18,12 @@
 //! Data types that connect Parquet physical types with their Rust-specific
 //! representations.
 
-use crate::{
-    basic::Type,
-    util::memory::{ByteBuffer, ByteBufferPtr},
-};
+use std::{mem, slice};
+
 use byteorder::{BigEndian, ByteOrder};
+
+use crate::basic::Type;
+use crate::util::memory::{ByteBuffer, ByteBufferPtr};
 
 /// Rust representation for logical type INT96, value is backed by an array of `u32`.
 /// The type only takes 12 bytes, without extra padding.
@@ -238,9 +239,9 @@ macro_rules! gen_as_bytes {
         impl AsBytes for $source_ty {
             fn as_bytes(&self) -> &[u8] {
                 unsafe {
-                    ::std::slice::from_raw_parts(
+                    slice::from_raw_parts(
                         self as *const $source_ty as *const u8,
-                        ::std::mem::size_of::<$source_ty>(),
+                        mem::size_of::<$source_ty>(),
                     )
                 }
             }

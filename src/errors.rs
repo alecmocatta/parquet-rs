@@ -19,6 +19,7 @@
 
 use std::{cell, convert, io, result};
 
+use quick_error::quick_error;
 use snap;
 use thrift;
 
@@ -26,29 +27,35 @@ quick_error! {
   /// Set of errors that can be produced during different operations in Parquet.
   #[derive(Debug, PartialEq)]
   pub enum ParquetError {
-    /// General Parquet error.
-    /// Returned when code violates normal workflow of working with Parquet files.
-    General(message: String) {
-      display("Parquet error: {}", message)
-      description(message)
-      from(e: io::Error) -> (format!("underlying IO error: {}", e))
-      from(e: snap::Error) -> (format!("underlying snap error: {}", e))
-      from(e: thrift::Error) -> (format!("underlying Thrift error: {}", e))
-      from(e: cell::BorrowMutError) -> (format!("underlying borrow error: {}", e))
-    }
-    /// "Not yet implemented" Parquet error.
-    /// Returned when functionality is not yet available.
-    NYI(message: String) {
-      display("NYI: {}", message)
-      description(message)
-    }
-    /// "End of file" Parquet error.
-    /// Returned when IO related failures occur, e.g. when there are not enough bytes to
-    /// decode.
-    EOF(message: String) {
-      display("EOF: {}", message)
-      description(message)
-    }
+      /// General Parquet error.
+      /// Returned when code violates normal workflow of working with Parquet files.
+      General(message: String) {
+          display("Parquet error: {}", message)
+              description(message)
+              from(e: io::Error) -> (format!("underlying IO error: {}", e))
+              from(e: snap::Error) -> (format!("underlying snap error: {}", e))
+              from(e: thrift::Error) -> (format!("underlying Thrift error: {}", e))
+              from(e: cell::BorrowMutError) -> (format!("underlying borrow error: {}", e))
+      }
+      /// "Not yet implemented" Parquet error.
+      /// Returned when functionality is not yet available.
+      NYI(message: String) {
+          display("NYI: {}", message)
+              description(message)
+      }
+      /// "End of file" Parquet error.
+      /// Returned when IO related failures occur, e.g. when there are not enough bytes to
+      /// decode.
+      EOF(message: String) {
+          display("EOF: {}", message)
+              description(message)
+      }
+      /// Arrow error.
+      /// Returned when reading into arrow or writing from arrow.
+      ArrowError(message:  String) {
+          display("Arrow: {}", message)
+              description(message)
+      }
   }
 }
 
@@ -68,19 +75,19 @@ impl convert::From<ParquetError> for io::Error {
 // Convenient macros for different errors
 
 macro_rules! general_err {
-  ($fmt:expr) => (ParquetError::General($fmt.to_owned()));
-  ($fmt:expr, $($args:expr),*) => (ParquetError::General(format!($fmt, $($args),*)));
-  ($e:expr, $fmt:expr) => (ParquetError::General($fmt.to_owned(), $e));
-  ($e:ident, $fmt:expr, $($args:tt),*) => (
-    ParquetError::General(&format!($fmt, $($args),*), $e));
+    ($fmt:expr) => (ParquetError::General($fmt.to_owned()));
+    ($fmt:expr, $($args:expr),*) => (ParquetError::General(format!($fmt, $($args),*)));
+    ($e:expr, $fmt:expr) => (ParquetError::General($fmt.to_owned(), $e));
+    ($e:ident, $fmt:expr, $($args:tt),*) => (
+        ParquetError::General(&format!($fmt, $($args),*), $e));
 }
 
 macro_rules! nyi_err {
-  ($fmt:expr) => (ParquetError::NYI($fmt.to_owned()));
-  ($fmt:expr, $($args:expr),*) => (ParquetError::NYI(format!($fmt, $($args),*)));
+    ($fmt:expr) => (ParquetError::NYI($fmt.to_owned()));
+    ($fmt:expr, $($args:expr),*) => (ParquetError::NYI(format!($fmt, $($args),*)));
 }
 
 macro_rules! eof_err {
-  ($fmt:expr) => (ParquetError::EOF($fmt.to_owned()));
-  ($fmt:expr, $($args:expr),*) => (ParquetError::EOF(format!($fmt, $($args),*)));
+    ($fmt:expr) => (ParquetError::EOF($fmt.to_owned()));
+    ($fmt:expr, $($args:expr),*) => (ParquetError::EOF(format!($fmt, $($args),*)));
 }

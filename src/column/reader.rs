@@ -24,17 +24,15 @@ use std::{
 };
 
 use super::page::{Page, PageReader};
-use crate::{
-    basic::*,
-    data_type::*,
-    encodings::{
-        decoding::{get_decoder, Decoder, DictDecoder, PlainDecoder},
-        levels::LevelDecoder,
-    },
-    errors::{ParquetError, Result},
-    schema::types::ColumnDescPtr,
-    util::memory::ByteBufferPtr,
+use crate::basic::*;
+use crate::data_type::*;
+use crate::encodings::{
+    decoding::{get_decoder, Decoder, DictDecoder, PlainDecoder},
+    levels::LevelDecoder,
 };
+use crate::errors::{ParquetError, Result};
+use crate::schema::types::ColumnDescPtr;
+use crate::util::memory::ByteBufferPtr;
 
 /// Column reader for a Parquet type.
 pub enum ColumnReader {
@@ -488,21 +486,20 @@ impl<T: DataType> ColumnReaderImpl<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use rand::distributions::range::SampleRange;
     use std::{collections::VecDeque, rc::Rc, vec::IntoIter};
 
-    use crate::{
-        basic::Type as PhysicalType,
-        column::page::Page,
-        encodings::{
-            encoding::{get_encoder, DictEncoder, Encoder},
-            levels::{max_buffer_size, LevelEncoder},
-        },
-        schema::types::{ColumnDescriptor, ColumnPath, Type as SchemaType},
-        util::{
-            memory::{ByteBufferPtr, MemTracker, MemTrackerPtr},
-            test_common::random_numbers_range,
-        },
+    use crate::basic::Type as PhysicalType;
+    use crate::column::page::Page;
+    use crate::encodings::{
+        encoding::{get_encoder, DictEncoder, Encoder},
+        levels::{max_buffer_size, LevelEncoder},
+    };
+    use crate::schema::types::{ColumnDescriptor, ColumnPath, Type as SchemaType};
+    use crate::util::{
+        memory::{ByteBufferPtr, MemTracker, MemTrackerPtr},
+        test_common::random_numbers_range,
     };
 
     const NUM_LEVELS: usize = 128;

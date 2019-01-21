@@ -19,9 +19,10 @@ use rand::{
     distributions::{range::SampleRange, Distribution, Standard},
     thread_rng, Rng,
 };
-use std::{env, fs, io::Write, path};
+use std::{env, fs, io::Write, path::PathBuf, str::FromStr};
 
-use crate::{data_type::*, util::memory::ByteBufferPtr};
+use crate::data_type::*;
+use crate::util::memory::ByteBufferPtr;
 
 /// Random generator of data type `T` values and sequences.
 pub trait RandGen<T: DataType> {
@@ -143,17 +144,22 @@ where
 }
 
 /// Returns path to the test parquet file in 'data' directory
-pub fn get_test_path(file_name: &str) -> path::PathBuf {
-    let mut path_buf = env::current_dir().unwrap();
-    path_buf.push("data");
-    path_buf.push(file_name);
-    path_buf
+pub fn get_test_path(file_name: &str) -> PathBuf {
+    let result = env::var("PARQUET_TEST_DATA");
+    if result.is_err() {
+        panic!("Please point PARQUET_TEST_DATA environment variable to the test data directory");
+    }
+    let mut pathbuf = PathBuf::from_str(result.unwrap().as_str()).unwrap();
+    pathbuf.push(file_name);
+    pathbuf
 }
 
 /// Returns file handle for a test parquet file from 'data' directory
 pub fn get_test_file(file_name: &str) -> fs::File {
     let file = fs::File::open(get_test_path(file_name).as_path());
-    assert!(file.is_ok());
+    if file.is_err() {
+        panic!("Test file {} not found", file_name)
+    }
     file.unwrap()
 }
 

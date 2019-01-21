@@ -17,17 +17,15 @@
 
 use std::mem;
 
-use crate::{
-    column::reader::{get_typed_column_reader, ColumnReader, ColumnReaderImpl},
-    data_type::*,
-    errors::{ParquetError, Result},
-    record::{
-        reader::{Reader, ValueReader},
-        types::Value,
-        Deserialize,
-    },
-    schema::types::{ColumnDescPtr, ColumnPath},
+use crate::column::reader::{get_typed_column_reader, ColumnReader, ColumnReaderImpl};
+use crate::data_type::*;
+use crate::errors::{ParquetError, Result};
+use crate::record::{
+    reader::{Reader, ValueReader},
+    types::Value,
+    Deserialize,
 };
+use crate::schema::types::{ColumnDescPtr, ColumnPath};
 
 /// High level API wrapper on column reader.
 /// Provides per-element access for each primitive column.
@@ -288,11 +286,10 @@ impl<T: DataType> TypedTripletIter<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        file::reader::{FileReader, SerializedFileReader},
-        schema::types::ColumnPath,
-        util::test_common::get_test_file,
-    };
+
+    use crate::file::reader::{FileReader, SerializedFileReader};
+    use crate::schema::types::ColumnPath;
+    use crate::util::test_common::get_test_file;
 
     #[test]
     #[should_panic(expected = "Expected positive batch size")]

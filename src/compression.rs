@@ -42,15 +42,14 @@
 
 use std::io::{self, Read, Write};
 
-use crate::{
-    basic::Compression as CodecType,
-    errors::{ParquetError, Result},
-};
 use brotli;
 use flate2::{read, write, Compression};
 use lz4;
 use snap::{decompress_len, max_compress_len, Decoder, Encoder};
 use zstd;
+
+use crate::basic::Compression as CodecType;
+use crate::errors::{ParquetError, Result};
 
 /// Parquet compression codec interface.
 pub trait Codec {
@@ -250,6 +249,7 @@ impl Codec for ZSTDCodec {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use crate::util::test_common::*;
 
     fn test_roundtrip(c: CodecType, data: &Vec<u8>) {

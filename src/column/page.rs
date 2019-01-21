@@ -17,12 +17,10 @@
 
 //! Contains Parquet Page definitions and page reader interface.
 
-use crate::{
-    basic::{Encoding, PageType},
-    errors::Result,
-    file::{metadata::ColumnChunkMetaData, statistics::Statistics},
-    util::memory::ByteBufferPtr,
-};
+use crate::basic::{Encoding, PageType};
+use crate::errors::Result;
+use crate::file::{metadata::ColumnChunkMetaData, statistics::Statistics};
+use crate::util::memory::ByteBufferPtr;
 
 /// Parquet Page definition.
 ///

@@ -19,11 +19,10 @@
 
 use std::{collections::HashMap, convert::From, fmt, rc::Rc};
 
-use crate::{
-    basic::{LogicalType, Repetition, Type as PhysicalType},
-    errors::{ParquetError, Result},
-};
 use parquet_format::SchemaElement;
+
+use crate::basic::{LogicalType, Repetition, Type as PhysicalType};
+use crate::errors::{ParquetError, Result};
 
 // ----------------------------------------------------------------------
 // Parquet Type definitions
@@ -760,19 +759,31 @@ impl SchemaDescriptor {
 
     /// Returns column root [`Type`](`::schema::types::Type`) for a field position.
     pub fn get_column_root(&self, i: usize) -> &Type {
+        let result = self.column_root_of(i);
+        result.as_ref()
+    }
+
+    /// Returns column root [`Type`](`::schema::types::Type`) pointer for a field position.
+    pub fn get_column_root_ptr(&self, i: usize) -> TypePtr {
+        let result = self.column_root_of(i);
+        result.clone()
+    }
+
+    fn column_root_of(&self, i: usize) -> &Rc<Type> {
         assert!(
             i < self.leaves.len(),
             "Index out of bound: {} not in [0, {})",
             i,
             self.leaves.len()
         );
+
         let result = self.leaf_to_base.get(&i);
         assert!(
             result.is_some(),
             "Expected a value for index {} but found None",
             i
         );
-        result.unwrap().as_ref()
+        result.unwrap()
     }
 
     /// Returns schema as [`Type`](`::schema::types::Type`).
@@ -1030,8 +1041,10 @@ fn to_thrift_helper(schema: &Type, elements: &mut Vec<SchemaElement>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::schema::parser::parse_message_type;
+
     use std::error::Error;
+
+    use crate::schema::parser::parse_message_type;
 
     #[test]
     fn test_primitive_type() {

@@ -20,8 +20,9 @@
 
 use std::{convert, fmt, result, str};
 
-use crate::errors::ParquetError;
 use parquet_format as parquet;
+
+use crate::errors::ParquetError;
 
 // ----------------------------------------------------------------------
 // Types from the Thrift definition

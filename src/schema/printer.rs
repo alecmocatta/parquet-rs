@@ -28,29 +28,26 @@
 //! use std::{fs::File, path::Path};
 //!
 //! // Open a file
-//! let path = Path::new("data/alltypes_plain.parquet");
-//! let file = File::open(&path).expect("File should exist");
-//! let reader = SerializedFileReader::new(file).expect("Valid Parquet file");
+//! let path = Path::new("test.parquet");
+//! if let Ok(file) = File::open(&path) {
+//!     let reader = SerializedFileReader::new(file).unwrap();
+//!     let parquet_metadata = reader.metadata();
 //!
-//! let parquet_metadata = reader.metadata();
+//!     print_parquet_metadata(&mut std::io::stdout(), &parquet_metadata);
+//!     print_file_metadata(&mut std::io::stdout(), &parquet_metadata.file_metadata());
 //!
-//! print_parquet_metadata(&mut std::io::stdout(), &parquet_metadata);
-//!
-//! print_file_metadata(&mut std::io::stdout(), &parquet_metadata.file_metadata());
-//!
-//! print_schema(
-//!     &mut std::io::stdout(),
-//!     &parquet_metadata.file_metadata().schema(),
-//! );
+//!     print_schema(
+//!         &mut std::io::stdout(),
+//!         &parquet_metadata.file_metadata().schema(),
+//!     );
+//! }
 //! ```
 
 use std::{fmt, io};
 
-use crate::{
-    basic::{LogicalType, Type as PhysicalType},
-    file::metadata::{ColumnChunkMetaData, FileMetaData, ParquetMetaData, RowGroupMetaData},
-    schema::types::Type,
-};
+use crate::basic::{LogicalType, Type as PhysicalType};
+use crate::file::metadata::{ColumnChunkMetaData, FileMetaData, ParquetMetaData, RowGroupMetaData};
+use crate::schema::types::Type;
 
 /// Prints Parquet metadata [`ParquetMetaData`](`::file::metadata::ParquetMetaData`)
 /// information.
@@ -257,13 +254,12 @@ impl<'a> Printer<'a> {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     use std::rc::Rc;
 
-    use super::*;
-    use crate::{
-        basic::{Repetition, Type as PhysicalType},
-        schema::{parser::parse_message_type, types::Type},
-    };
+    use crate::basic::{Repetition, Type as PhysicalType};
+    use crate::schema::{parser::parse_message_type, types::Type};
 
     fn assert_print_parse_message(message: Type) {
         let mut s = String::new();

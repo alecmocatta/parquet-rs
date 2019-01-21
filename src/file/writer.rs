@@ -24,23 +24,22 @@ use std::{
     rc::Rc,
 };
 
-use crate::{
-    basic::PageType,
-    column::{
-        page::{CompressedPage, Page, PageWriteSpec, PageWriter},
-        writer::{get_column_writer, ColumnWriter},
-    },
-    errors::{ParquetError, Result},
-    file::{
-        metadata::*, properties::WriterPropertiesPtr,
-        statistics::to_thrift as statistics_to_thrift, FOOTER_SIZE, PARQUET_MAGIC,
-    },
-    schema::types::{self, SchemaDescPtr, SchemaDescriptor, TypePtr},
-    util::io::{FileSink, Position},
-};
 use byteorder::{ByteOrder, LittleEndian};
 use parquet_format as parquet;
 use thrift::protocol::{TCompactOutputProtocol, TOutputProtocol};
+
+use crate::basic::PageType;
+use crate::column::{
+    page::{CompressedPage, Page, PageWriteSpec, PageWriter},
+    writer::{get_column_writer, ColumnWriter},
+};
+use crate::errors::{ParquetError, Result};
+use crate::file::{
+    metadata::*, properties::WriterPropertiesPtr, statistics::to_thrift as statistics_to_thrift,
+    FOOTER_SIZE, PARQUET_MAGIC,
+};
+use crate::schema::types::{self, SchemaDescPtr, SchemaDescriptor, TypePtr};
+use crate::util::io::{FileSink, Position};
 
 // ----------------------------------------------------------------------
 // APIs for file & row group writers
@@ -509,21 +508,20 @@ impl<T: Write + Position> PageWriter for SerializedPageWriter<T> {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     use std::{error::Error, io::Cursor};
 
-    use super::*;
-    use crate::{
-        basic::{Compression, Encoding, Repetition, Type},
-        column::page::PageReader,
-        compression::{create_codec, Codec},
-        file::{
-            properties::WriterProperties,
-            reader::{FileReader, SerializedFileReader, SerializedPageReader},
-            statistics::{from_thrift, to_thrift, Statistics},
-        },
-        record::types::Row,
-        util::{memory::ByteBufferPtr, test_common::get_temp_file},
+    use crate::basic::{Compression, Encoding, Repetition, Type};
+    use crate::column::page::PageReader;
+    use crate::compression::{create_codec, Codec};
+    use crate::file::{
+        properties::WriterProperties,
+        reader::{FileReader, SerializedFileReader, SerializedPageReader},
+        statistics::{from_thrift, to_thrift, Statistics},
     };
+    use crate::record::types::Row;
+    use crate::util::{memory::ByteBufferPtr, test_common::get_temp_file};
 
     #[test]
     fn test_file_writer_error_after_close() {

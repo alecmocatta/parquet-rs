@@ -24,26 +24,9 @@
 //! starting reference, [`metadata::ParquetMetaData`](metadata/index.html) for file
 //! metadata, and [`statistics`](statistics/index.html) for working with statistics.
 //!
-//! # Example of reading an existing file
-//!
-//! ```rust
-//! use parquet::file::reader::{FileReader, SerializedFileReader};
-//! use std::{fs::File, path::Path};
-//!
-//! let path = Path::new("data/alltypes_plain.parquet");
-//! let file = File::open(&path).unwrap();
-//! let reader = SerializedFileReader::new(file).unwrap();
-//!
-//! let parquet_metadata = reader.metadata();
-//! assert_eq!(parquet_metadata.num_row_groups(), 1);
-//!
-//! let row_group_reader = reader.get_row_group(0).unwrap();
-//! assert_eq!(row_group_reader.num_columns(), 11);
-//! ```
-//!
 //! # Example of writing a new file
 //!
-//! ```rust
+//! ```rust,no_run
 //! use std::{fs, path::Path, rc::Rc};
 //!
 //! use parquet::{
@@ -54,7 +37,7 @@
 //!     schema::parser::parse_message_type,
 //! };
 //!
-//! let path = Path::new("target/debug/examples/sample.parquet");
+//! let path = Path::new("/path/to/sample.parquet");
 //!
 //! let message_type = "
 //!   message schema {
@@ -75,6 +58,24 @@
 //!
 //! let bytes = fs::read(&path).unwrap();
 //! assert_eq!(&bytes[0..4], &[b'P', b'A', b'R', b'1']);
+//! ```
+//! # Example of reading an existing file
+//!
+//! ```rust,no_run
+//! use parquet::file::reader::{FileReader, SerializedFileReader};
+//! use std::{fs::File, path::Path};
+//!
+//! let path = Path::new("/path/to/sample.parquet");
+//! if let Ok(file) = File::open(&path) {
+//!     let file = File::open(&path).unwrap();
+//!     let reader = SerializedFileReader::new(file).unwrap();
+//!
+//!     let parquet_metadata = reader.metadata();
+//!     assert_eq!(parquet_metadata.num_row_groups(), 1);
+//!
+//!     let row_group_reader = reader.get_row_group(0).unwrap();
+//!     assert_eq!(row_group_reader.num_columns(), 1);
+//! }
 //! ```
 
 pub mod metadata;

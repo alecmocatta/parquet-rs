@@ -25,16 +25,14 @@ use super::{
     types::{Group, List, Map, Root, Timestamp, Value},
     Deserialize, DisplayDisplayType,
 };
-use crate::{
-    column::reader::ColumnReader,
-    data_type::{
-        BoolType, ByteArrayType, DoubleType, FixedLenByteArrayType, FloatType, Int32Type,
-        Int64Type, Int96, Int96Type,
-    },
-    errors::{ParquetError, Result},
-    file::reader::{FileReader, RowGroupReader},
-    schema::types::{ColumnDescPtr, ColumnPath, SchemaDescPtr, SchemaDescriptor, Type},
+use crate::column::reader::ColumnReader;
+use crate::data_type::{
+    BoolType, ByteArrayType, DoubleType, FixedLenByteArrayType, FloatType, Int32Type, Int64Type,
+    Int96, Int96Type,
 };
+use crate::errors::{ParquetError, Result};
+use crate::file::reader::{FileReader, RowGroupReader};
+use crate::schema::types::{ColumnDescPtr, ColumnPath, SchemaDescPtr, SchemaDescriptor, Type};
 
 /// Default batch size for a reader
 const DEFAULT_BATCH_SIZE: usize = 1024;
@@ -970,77 +968,76 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        errors::Result,
-        file::reader::{FileReader, SerializedFileReader},
-        record::types::{Row, Value},
-        schema::parser::parse_message_type,
-        util::test_common::get_test_file,
-    };
+
+    use crate::errors::Result;
+    use crate::file::reader::{FileReader, SerializedFileReader};
+    use crate::record::types::{Row, Value};
+    use crate::schema::parser::parse_message_type;
+    use crate::util::test_common::get_test_file;
 
     // Convenient macros to assemble row, list, map, and group.
 
     macro_rules! group {
-    ( $( ($name:expr, $e:expr) ), * ) => {
-      {
-        #[allow(unused_mut)]
-        let mut result = Vec::new();
-        #[allow(unused_mut)]
-        let mut keys = std::collections::HashMap::new();
-        $(
-          keys.insert($name, result.len());
-          result.push($e);
-        )*
-        Group(result, std::rc::Rc::new(keys))
-      }
+        ( $( ($name:expr, $e:expr) ), * ) => {
+            {
+                #[allow(unused_mut)]
+                let mut result = Vec::new();
+                #[allow(unused_mut)]
+                let mut keys = std::collections::HashMap::new();
+                $(
+                    keys.insert($name, result.len());
+                    result.push($e);
+                )*
+                Group(result, std::rc::Rc::new(keys))
+            }
+        }
     }
-  }
     macro_rules! groupv {
-    ( $( ($name:expr, $e:expr) ), * ) => {
-      Value::Group(group!($( ($name, $e) ), *))
+        ( $( ($name:expr, $e:expr) ), * ) => {
+            Value::Group(group!($( ($name, $e) ), *))
+        }
     }
-  }
     macro_rules! row {
-    ( $( ($name:expr, $e:expr) ), * ) => {
-      group!($(($name,$e)),*)
+        ( $( ($name:expr, $e:expr) ), * ) => {
+            group!($(($name,$e)),*)
+        }
     }
-  }
 
     macro_rules! list {
-    ( $( $e:expr ), * ) => {
-      {
-        #[allow(unused_mut)]
-        let mut result = Vec::new();
-        $(
-          result.push($e);
-        )*
-        List(result)
-      }
+        ( $( $e:expr ), * ) => {
+            {
+                #[allow(unused_mut)]
+                let mut result = Vec::new();
+                $(
+                    result.push($e);
+                )*
+                List(result)
+            }
+        }
     }
-  }
     macro_rules! listv {
-    ( $( $e:expr ), * ) => {
-      Value::List(list!($($e),*))
+        ( $( $e:expr ), * ) => {
+            Value::List(list!($($e),*))
+        }
     }
-  }
 
     macro_rules! map {
-    ( $( ($k:expr, $v:expr) ), * ) => {
-      {
-        #[allow(unused_mut)]
-        let mut result = HashMap::new();
-        $(
-          result.insert($k, $v);
-        )*
-        Map(result)
-      }
+        ( $( ($k:expr, $v:expr) ), * ) => {
+            {
+                #[allow(unused_mut)]
+                let mut result = HashMap::new();
+                $(
+                    result.insert($k, $v);
+                )*
+                Map(result)
+            }
+        }
     }
-  }
     macro_rules! mapv {
-    ( $( ($k:expr, $v:expr) ), * ) => {
-      Value::Map(map!($(($k,$v)),*))
+        ( $( ($k:expr, $v:expr) ), * ) => {
+            Value::Map(map!($(($k,$v)),*))
+        }
     }
-  }
 
     macro_rules! somev {
         ( $e:expr ) => {

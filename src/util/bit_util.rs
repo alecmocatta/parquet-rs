@@ -20,10 +20,8 @@ use std::{
     mem::{size_of, transmute_copy},
 };
 
-use crate::{
-    errors::{ParquetError, Result},
-    util::{bit_packing::unpack32, memory::ByteBufferPtr},
-};
+use crate::errors::{ParquetError, Result};
+use crate::util::{bit_packing::unpack32, memory::ByteBufferPtr};
 
 /// Reads `$size` of bytes from `$src`, and reinterprets them as type `$ty`, in
 /// little-endian order. `$ty` must implement the `Default` trait. Otherwise this won't
@@ -616,14 +614,11 @@ impl From<Vec<u8>> for BitReader {
 
 #[cfg(test)]
 mod tests {
-    use std::fmt::Debug;
-
-    use super::{
-        super::{memory::ByteBufferPtr, test_common::*},
-        *,
-    };
+    use super::super::test_common::*;
+    use super::*;
 
     use rand::distributions::{Distribution, Standard};
+    use std::fmt::Debug;
 
     #[test]
     fn test_ceil() {

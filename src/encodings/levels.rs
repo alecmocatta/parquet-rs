@@ -18,14 +18,13 @@
 use std::{cmp, mem};
 
 use super::rle::{RleDecoder, RleEncoder};
-use crate::{
-    basic::Encoding,
-    data_type::AsBytes,
-    errors::{ParquetError, Result},
-    util::{
-        bit_util::{ceil, log2, BitReader, BitWriter},
-        memory::ByteBufferPtr,
-    },
+
+use crate::basic::Encoding;
+use crate::data_type::AsBytes;
+use crate::errors::{ParquetError, Result};
+use crate::util::{
+    bit_util::{ceil, log2, BitReader, BitWriter},
+    memory::ByteBufferPtr,
 };
 
 /// Computes max buffer size for level encoder/decoder based on encoding, max
@@ -267,6 +266,7 @@ impl LevelDecoder {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use crate::util::test_common::random_numbers_range;
 
     fn test_internal_roundtrip(enc: Encoding, levels: &[i16], max_level: i16, v2: bool) {
